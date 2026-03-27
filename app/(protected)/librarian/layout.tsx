@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { assertRole } from "@/lib/auth/rbac";
 import { requireSession } from "@/lib/auth/auth.session";
+import { assertRole } from "@/lib/auth/rbac";
 
 interface LibrarianLayoutProps {
   children: ReactNode;
@@ -20,7 +20,7 @@ export default async function LibrarianLayout({ children }: LibrarianLayoutProps
       user={user}
       eyebrow="Phase 1 librarian"
       title="Scholaris Librarian"
-      description="Không gian vận hành chính cho quản lý đầu sách, bản sao, tra cứu, mượn trả và báo cáo nghiệp vụ."
+      description="Không gian vận hành chính cho độc giả, đầu sách, bản sao, tra cứu, mượn trả và báo cáo nghiệp vụ."
     >
       {children}
     </AppShell>

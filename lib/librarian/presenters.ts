@@ -17,6 +17,12 @@ export const STATUS_LABELS: Record<string, string> = {
   INACTIVE: "Ngừng hoạt động",
 };
 
+export const GENDER_LABELS: Record<string, string> = {
+  MALE: "Nam",
+  FEMALE: "Nữ",
+  OTHER: "Khác",
+};
+
 export function formatDate(value: string | null | undefined): string {
   if (!value) {
     return "Chưa có";
@@ -39,4 +45,12 @@ export function formatCount(value: number): string {
 
 export function getStatusLabel(status: string): string {
   return STATUS_LABELS[status] ?? status;
+}
+
+export function getGenderLabel(gender: string | null | undefined): string {
+  if (!gender) {
+    return "Chưa cập nhật";
+  }
+
+  return GENDER_LABELS[gender] ?? gender;
 }

@@ -4,11 +4,15 @@ import { redirect } from "next/navigation";
 
 import { apiRequest } from "@/lib/api/api-client";
 import { isApiError } from "@/lib/api/api-errors";
-import { copyEndpoints, loanEndpoints, titleEndpoints } from "@/lib/api/endpoints";
+import { copyEndpoints, loanEndpoints, readerEndpoints, titleEndpoints } from "@/lib/api/endpoints";
 import { requireSession } from "@/lib/auth/auth.session";
 import { assertRole } from "@/lib/auth/rbac";
 import { APP_ROUTES } from "@/lib/config/routes";
-import type { BookCopyStatus } from "@/lib/librarian/types";
+import type {
+  BookCopyStatus,
+  ReaderGender,
+  ReaderStatus,
+} from "@/lib/librarian/types";
 import { sanitizeLibrarianRedirect, updateHref } from "@/lib/librarian/utils";
 
 class LibrarianValidationError extends Error {}
@@ -57,9 +61,11 @@ function translateApiError(error: unknown): string {
     BR_06_COPY_NOT_AVAILABLE:
       "Bản sao hiện không ở trạng thái AVAILABLE nên không thể cho mượn.",
     BR_07_TITLE_HAS_DEPENDENCIES:
-      "Không thể xoá đầu sách vì vẫn còn bản sao hoặc giao dịch đang phụ thuộc.",
+      "Không thể xóa đầu sách vì vẫn còn bản sao hoặc giao dịch đang phụ thuộc.",
     BR_08_COPY_HAS_ACTIVE_LOAN:
-      "Không thể xoá bản sao vì đang có phiếu mượn chưa hoàn tất.",
+      "Không thể xóa bản sao vì đang có phiếu mượn chưa hoàn tất.",
+    BR_09_READER_HAS_UNRETURNED_LOAN:
+      "Không thể xóa độc giả vì vẫn còn phiếu mượn chưa trả.",
     BR_11_LOAN_ALREADY_RETURNED: "Phiếu mượn này đã được ghi nhận trả trước đó.",
     SESSION_EXPIRED: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
   };
@@ -69,11 +75,12 @@ function translateApiError(error: unknown): string {
   }
 
   const messageByText: Record<string, string> = {
-    "Major not found": "Chuyên ngành không tồn tại hoặc đã bị xoá.",
-    "Title not found": "Đầu sách không tồn tại hoặc đã bị xoá.",
-    "Copy not found": "Bản sao sách không tồn tại hoặc đã bị xoá.",
+    "Major not found": "Chuyên ngành không tồn tại hoặc đã bị xóa.",
+    "Title not found": "Đầu sách không tồn tại hoặc đã bị xóa.",
+    "Copy not found": "Bản sao sách không tồn tại hoặc đã bị xóa.",
     "Reader not found": "Độc giả không tồn tại.",
     "Loan not found": "Không tìm thấy phiếu mượn.",
+    "Reader code already exists": "Mã độc giả đã tồn tại.",
     "Title code already exists": "Mã đầu sách đã tồn tại.",
     "Copy code already exists": "Mã bản sao đã tồn tại.",
     "Failed to create loan": "Không thể lập phiếu mượn.",
@@ -83,7 +90,7 @@ function translateApiError(error: unknown): string {
   return messageByText[error.message] ?? error.message;
 }
 
-function redirectWithFeedback(
+function buildFeedbackRedirectHref(
   rawRedirectTo: FormDataEntryValue | string | null | undefined,
   fallbackPath: string,
   options: {
@@ -91,9 +98,10 @@ function redirectWithFeedback(
     error?: string;
     dropParams?: string[];
   }
-): never {
+): string {
   const basePath = sanitizeLibrarianRedirect(rawRedirectTo, fallbackPath);
-  const next = updateHref(basePath, {
+
+  return updateHref(basePath, {
     notice: options.notice ?? null,
     error: options.error ?? null,
     ...(options.dropParams ?? []).reduce<Record<string, null>>((accumulator, key) => {
@@ -101,14 +109,27 @@ function redirectWithFeedback(
       return accumulator;
     }, {}),
   });
-
-  redirect(next);
 }
 
 async function ensureLibrarian(): Promise<void> {
   const session = await requireSession();
 
   assertRole(session.sessionData.user.role, ["LIBRARIAN"]);
+}
+
+function buildReaderPayload(formData: FormData, withCode: boolean) {
+  return {
+    ...(withCode
+      ? {
+          ma_doc_gia: readRequiredText(formData, "ma_doc_gia", "Mã độc giả"),
+        }
+      : {}),
+    ho_ten: readRequiredText(formData, "ho_ten", "Họ tên"),
+    lop: readRequiredText(formData, "lop", "Lớp"),
+    ngay_sinh: readRequiredText(formData, "ngay_sinh", "Ngày sinh"),
+    gioi_tinh: readRequiredText(formData, "gioi_tinh", "Giới tính") as ReaderGender,
+    trang_thai: readRequiredText(formData, "trang_thai", "Trạng thái") as ReaderStatus,
+  };
 }
 
 function buildTitlePayload(formData: FormData, withCode: boolean) {
@@ -128,8 +149,6 @@ function buildTitlePayload(formData: FormData, withCode: boolean) {
 }
 
 function buildCopyPayload(formData: FormData, withCode: boolean) {
-  const tinhTrang = readRequiredText(formData, "tinh_trang", "Tình trạng") as BookCopyStatus;
-
   return {
     ...(withCode
       ? {
@@ -137,13 +156,87 @@ function buildCopyPayload(formData: FormData, withCode: boolean) {
           ma_dau_sach: readRequiredText(formData, "ma_dau_sach", "Đầu sách"),
         }
       : {}),
-    tinh_trang: tinhTrang,
+    tinh_trang: readRequiredText(formData, "tinh_trang", "Tình trạng") as BookCopyStatus,
     ngay_nhap: readRequiredText(formData, "ngay_nhap", "Ngày nhập"),
   };
 }
 
+export async function createReaderAction(formData: FormData): Promise<void> {
+  const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianReaders, {});
+
+  try {
+    await ensureLibrarian();
+    await apiRequest(readerEndpoints.list, {
+      method: "POST",
+      body: JSON.stringify(buildReaderPayload(formData, true)),
+    });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianReaders, {
+      notice: "Độc giả mới đã được tạo.",
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof LibrarianValidationError ? error.message : translateApiError(error);
+
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianReaders, {
+      error: message,
+    });
+  }
+
+  redirect(nextHref);
+}
+
+export async function updateReaderAction(code: string, formData: FormData): Promise<void> {
+  const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianReaders, {});
+
+  try {
+    await ensureLibrarian();
+    await apiRequest(readerEndpoints.detail(code), {
+      method: "PATCH",
+      body: JSON.stringify(buildReaderPayload(formData, false)),
+    });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianReaders, {
+      notice: `Độc giả ${code} đã được cập nhật.`,
+      dropParams: ["edit"],
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof LibrarianValidationError ? error.message : translateApiError(error);
+
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianReaders, {
+      error: message,
+    });
+  }
+
+  redirect(nextHref);
+}
+
+export async function deleteReaderAction(code: string, formData: FormData): Promise<void> {
+  const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianReaders, {});
+
+  try {
+    await ensureLibrarian();
+    await apiRequest(readerEndpoints.detail(code), {
+      method: "DELETE",
+    });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianReaders, {
+      notice: `Độc giả ${code} đã được xóa khỏi danh mục hoạt động.`,
+      dropParams: ["edit"],
+    });
+  } catch (error: unknown) {
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianReaders, {
+      error: translateApiError(error),
+    });
+  }
+
+  redirect(nextHref);
+}
+
 export async function createTitleAction(formData: FormData): Promise<void> {
   const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianTitles, {});
 
   try {
     await ensureLibrarian();
@@ -151,22 +244,24 @@ export async function createTitleAction(formData: FormData): Promise<void> {
       method: "POST",
       body: JSON.stringify(buildTitlePayload(formData, true)),
     });
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianTitles, {
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianTitles, {
       notice: "Đầu sách mới đã được tạo.",
     });
   } catch (error: unknown) {
     const message =
       error instanceof LibrarianValidationError ? error.message : translateApiError(error);
 
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianTitles, { error: message });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianTitles, {
+      error: message,
+    });
   }
+
+  redirect(nextHref);
 }
 
-export async function updateTitleAction(
-  code: string,
-  formData: FormData
-): Promise<void> {
+export async function updateTitleAction(code: string, formData: FormData): Promise<void> {
   const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianTitles, {});
 
   try {
     await ensureLibrarian();
@@ -174,7 +269,7 @@ export async function updateTitleAction(
       method: "PATCH",
       body: JSON.stringify(buildTitlePayload(formData, false)),
     });
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianTitles, {
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianTitles, {
       notice: `Đầu sách ${code} đã được cập nhật.`,
       dropParams: ["edit"],
     });
@@ -182,34 +277,39 @@ export async function updateTitleAction(
     const message =
       error instanceof LibrarianValidationError ? error.message : translateApiError(error);
 
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianTitles, { error: message });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianTitles, {
+      error: message,
+    });
   }
+
+  redirect(nextHref);
 }
 
-export async function deleteTitleAction(
-  code: string,
-  formData: FormData
-): Promise<void> {
+export async function deleteTitleAction(code: string, formData: FormData): Promise<void> {
   const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianTitles, {});
 
   try {
     await ensureLibrarian();
     await apiRequest(titleEndpoints.detail(code), {
       method: "DELETE",
     });
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianTitles, {
-      notice: `Đầu sách ${code} đã được xoá khỏi danh mục hoạt động.`,
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianTitles, {
+      notice: `Đầu sách ${code} đã được xóa khỏi danh mục hoạt động.`,
       dropParams: ["edit"],
     });
   } catch (error: unknown) {
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianTitles, {
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianTitles, {
       error: translateApiError(error),
     });
   }
+
+  redirect(nextHref);
 }
 
 export async function createCopyAction(formData: FormData): Promise<void> {
   const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianCopies, {});
 
   try {
     await ensureLibrarian();
@@ -217,22 +317,24 @@ export async function createCopyAction(formData: FormData): Promise<void> {
       method: "POST",
       body: JSON.stringify(buildCopyPayload(formData, true)),
     });
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianCopies, {
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianCopies, {
       notice: "Bản sao mới đã được thêm vào kho.",
     });
   } catch (error: unknown) {
     const message =
       error instanceof LibrarianValidationError ? error.message : translateApiError(error);
 
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianCopies, { error: message });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianCopies, {
+      error: message,
+    });
   }
+
+  redirect(nextHref);
 }
 
-export async function updateCopyAction(
-  code: string,
-  formData: FormData
-): Promise<void> {
+export async function updateCopyAction(code: string, formData: FormData): Promise<void> {
   const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianCopies, {});
 
   try {
     await ensureLibrarian();
@@ -240,7 +342,7 @@ export async function updateCopyAction(
       method: "PATCH",
       body: JSON.stringify(buildCopyPayload(formData, false)),
     });
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianCopies, {
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianCopies, {
       notice: `Bản sao ${code} đã được cập nhật.`,
       dropParams: ["edit"],
     });
@@ -248,34 +350,39 @@ export async function updateCopyAction(
     const message =
       error instanceof LibrarianValidationError ? error.message : translateApiError(error);
 
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianCopies, { error: message });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianCopies, {
+      error: message,
+    });
   }
+
+  redirect(nextHref);
 }
 
-export async function deleteCopyAction(
-  code: string,
-  formData: FormData
-): Promise<void> {
+export async function deleteCopyAction(code: string, formData: FormData): Promise<void> {
   const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianCopies, {});
 
   try {
     await ensureLibrarian();
     await apiRequest(copyEndpoints.detail(code), {
       method: "DELETE",
     });
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianCopies, {
-      notice: `Bản sao ${code} đã được xoá khỏi kho hoạt động.`,
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianCopies, {
+      notice: `Bản sao ${code} đã được xóa khỏi kho hoạt động.`,
       dropParams: ["edit"],
     });
   } catch (error: unknown) {
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianCopies, {
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianCopies, {
       error: translateApiError(error),
     });
   }
+
+  redirect(nextHref);
 }
 
 export async function createLoanAction(formData: FormData): Promise<void> {
   const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianLoans, {});
 
   try {
     await ensureLibrarian();
@@ -288,7 +395,7 @@ export async function createLoanAction(formData: FormData): Promise<void> {
         ghi_chu_tinh_trang: readOptionalText(formData, "ghi_chu_tinh_trang"),
       }),
     });
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianLoans, {
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianLoans, {
       notice: "Phiếu mượn đã được lập thành công.",
       dropParams: ["return_loan"],
     });
@@ -296,15 +403,17 @@ export async function createLoanAction(formData: FormData): Promise<void> {
     const message =
       error instanceof LibrarianValidationError ? error.message : translateApiError(error);
 
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianLoans, { error: message });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianLoans, {
+      error: message,
+    });
   }
+
+  redirect(nextHref);
 }
 
-export async function returnLoanAction(
-  loanId: string,
-  formData: FormData
-): Promise<void> {
+export async function returnLoanAction(loanId: string, formData: FormData): Promise<void> {
   const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianLoans, {});
 
   try {
     await ensureLibrarian();
@@ -320,7 +429,7 @@ export async function returnLoanAction(
         ghi_chu_tinh_trang: readOptionalText(formData, "ghi_chu_tinh_trang"),
       }),
     });
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianLoans, {
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianLoans, {
       notice: `Đã ghi nhận trả sách cho phiếu #${loanId}.`,
       dropParams: ["return_loan"],
     });
@@ -328,6 +437,10 @@ export async function returnLoanAction(
     const message =
       error instanceof LibrarianValidationError ? error.message : translateApiError(error);
 
-    redirectWithFeedback(redirectTo, APP_ROUTES.librarianLoans, { error: message });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianLoans, {
+      error: message,
+    });
   }
+
+  redirect(nextHref);
 }

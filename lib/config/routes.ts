@@ -5,6 +5,7 @@ export const APP_ROUTES = {
   login: "/login",
   admin: "/admin",
   librarian: "/librarian",
+  librarianReaders: "/librarian/readers",
   librarianTitles: "/librarian/titles",
   librarianCopies: "/librarian/copies",
   librarianSearch: "/librarian/search",

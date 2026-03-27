@@ -8,6 +8,7 @@ export type BookCopyStatus =
 export type LoanStatus = "BORROWED" | "RETURNED" | "NEEDS_REVIEW";
 
 export type ReaderStatus = "ACTIVE" | "LOCKED" | "INACTIVE";
+export type ReaderGender = "MALE" | "FEMALE" | "OTHER";
 
 export interface Major {
   code: string;
@@ -37,8 +38,8 @@ export interface Reader {
   code: string;
   fullName: string;
   className: string;
-  birthDate?: string;
-  gender?: string;
+  birthDate?: string | null;
+  gender?: ReaderGender | null;
   status: ReaderStatus;
 }
 

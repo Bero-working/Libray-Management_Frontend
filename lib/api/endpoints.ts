@@ -16,6 +16,7 @@ export const majorEndpoints = {
 export const readerEndpoints = {
   list: "/readers",
   detail: (code: string) => `/readers/${encodeSegment(code)}`,
+  printCard: (code: string) => `/readers/${encodeSegment(code)}/print-card`,
 } as const;
 
 export const titleEndpoints = {

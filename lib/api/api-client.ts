@@ -51,7 +51,7 @@ function buildUrl(path: string): string {
 async function parseResponse<T>(response: Response): Promise<T> {
   const payload = (await response.json()) as ApiEnvelope<T>;
 
-  if (!response.ok || !payload.success || !payload.data) {
+  if (!payload.success || !payload.data) {
     throw new ApiError(
       payload.error?.message ?? "Request failed.",
       response.status,
@@ -60,6 +60,32 @@ async function parseResponse<T>(response: Response): Promise<T> {
   }
 
   return payload.data;
+}
+
+async function buildApiError(response: Response): Promise<ApiError> {
+  const contentType = response.headers.get("Content-Type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    try {
+      const payload = (await response.json()) as ApiEnvelope<unknown>;
+
+      return new ApiError(
+        payload.error?.message ?? "Request failed.",
+        response.status,
+        payload.error?.code
+      );
+    } catch {
+      return new ApiError("Request failed.", response.status);
+    }
+  }
+
+  try {
+    const message = (await response.text()).trim();
+
+    return new ApiError(message || "Request failed.", response.status);
+  } catch {
+    return new ApiError("Request failed.", response.status);
+  }
 }
 
 async function refreshTokens(
@@ -84,10 +110,10 @@ async function refreshTokens(
   return refreshedTokens;
 }
 
-export async function apiRequest<T>(
+export async function apiRequestRaw(
   path: string,
   options: RequestOptions = {}
-): Promise<T> {
+): Promise<Response> {
   const {
     skipAuth = false,
     retryOnUnauthorized = true,
@@ -125,7 +151,7 @@ export async function apiRequest<T>(
     try {
       const refreshedTokens = await refreshTokens(tokens, sessionData);
 
-      return apiRequest<T>(path, {
+      return apiRequestRaw(path, {
         ...options,
         headers: {
           ...Object.fromEntries(requestHeaders.entries()),
@@ -138,6 +164,19 @@ export async function apiRequest<T>(
       throw new ApiError("Session expired.", 401, "SESSION_EXPIRED");
     }
   }
+
+  if (!response.ok) {
+    throw await buildApiError(response);
+  }
+
+  return response;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  const response = await apiRequestRaw(path, options);
 
   return parseResponse<T>(response);
 }

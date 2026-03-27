@@ -22,6 +22,12 @@ export const navigationItems: readonly NavigationItem[] = [
     allowedRoles: ["LIBRARIAN"],
   },
   {
+    href: APP_ROUTES.librarianReaders,
+    label: "Readers",
+    description: "Quản lý hồ sơ độc giả",
+    allowedRoles: ["LIBRARIAN"],
+  },
+  {
     href: APP_ROUTES.librarianTitles,
     label: "Book Titles",
     description: "Quản lý metadata đầu sách",

@@ -20,6 +20,7 @@ export async function loginAction(
 ): Promise<LoginFormState | undefined> {
   const username = readStringField(formData, "username");
   const password = readStringField(formData, "password");
+  let destination: string | null = null;
 
   if (!username || !password) {
     return {
@@ -45,7 +46,7 @@ export async function loginAction(
       },
     });
 
-    redirect(getDefaultRouteForRole(response.user.role));
+    destination = getDefaultRouteForRole(response.user.role);
   } catch (error: unknown) {
     if (isApiError(error)) {
       if (error.status === 401) {
@@ -68,6 +69,10 @@ export async function loginAction(
     return {
       message: "Đăng nhập thất bại. Vui lòng thử lại.",
     };
+  }
+
+  if (destination) {
+    redirect(destination);
   }
 }
 

@@ -16,6 +16,7 @@ import type {
   Major,
   PaginatedResult,
   Reader,
+  ReaderGender,
   SearchBookFilters,
   SearchBookResult,
   Title,
@@ -36,9 +37,20 @@ interface BackendReader {
   code: string;
   fullName: string;
   className: string;
-  birthDate?: string;
-  gender?: string;
+  birthDate?: string | null;
+  gender?: ReaderGender | null;
   status: Reader["status"];
+}
+
+function mapReader(reader: BackendReader): Reader {
+  return {
+    code: reader.code,
+    fullName: reader.fullName,
+    className: reader.className,
+    birthDate: reader.birthDate,
+    gender: reader.gender,
+    status: reader.status,
+  };
 }
 
 export async function getMajors(): Promise<Major[]> {
@@ -56,16 +68,13 @@ export async function getMajors(): Promise<Major[]> {
 export async function getReaders(): Promise<Reader[]> {
   const readers = await apiRequest<BackendReader[]>(readerEndpoints.list);
 
-  return readers
-    .map((reader) => ({
-      code: reader.code,
-      fullName: reader.fullName,
-      className: reader.className,
-      birthDate: reader.birthDate,
-      gender: reader.gender,
-      status: reader.status,
-    }))
-    .toSorted((left, right) => left.code.localeCompare(right.code, "vi"));
+  return readers.map(mapReader).toSorted((left, right) => left.code.localeCompare(right.code, "vi"));
+}
+
+export async function getReaderDetail(code: string): Promise<Reader> {
+  const reader = await apiRequest<BackendReader>(readerEndpoints.detail(code));
+
+  return mapReader(reader);
 }
 
 export async function getTitles(): Promise<Title[]> {
