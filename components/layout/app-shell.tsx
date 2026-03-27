@@ -22,11 +22,15 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.08),_transparent_45%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] lg:flex">
-      <AppSidebar role={role} />
-      <div className="flex min-h-screen flex-1 flex-col">
-        <AppTopbar eyebrow={eyebrow} title={title} description={description} user={user} />
-        <main className="flex-1 px-6 py-8 lg:px-10">{children}</main>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.08),_transparent_45%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)]">
+      <div className="mx-auto min-h-screen w-full max-w-[1600px] lg:grid lg:grid-cols-[18rem_minmax(0,1fr)]">
+        <AppSidebar role={role} />
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+          <AppTopbar eyebrow={eyebrow} title={title} description={description} user={user} />
+          <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8 xl:px-10">
+            <div className="mx-auto w-full max-w-7xl">{children}</div>
+          </main>
+        </div>
       </div>
     </div>
   );

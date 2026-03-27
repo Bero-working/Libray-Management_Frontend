@@ -21,8 +21,7 @@ interface SearchPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-const inputClass =
-  "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500";
+const inputClass = "ui-input w-full px-4 py-3 text-sm";
 
 export default async function LibrarianSearchPage({ searchParams }: SearchPageProps) {
   const resolvedSearchParams = await searchParams;
@@ -73,13 +72,13 @@ export default async function LibrarianSearchPage({ searchParams }: SearchPagePr
           <>
             <Link
               href={APP_ROUTES.librarianTitles}
-              className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+              className="ui-button-secondary px-4 py-3 text-sm font-semibold"
             >
               Quản lý đầu sách
             </Link>
             <Link
               href={APP_ROUTES.librarianLoans}
-              className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="ui-button-primary px-4 py-3 text-sm font-semibold"
             >
               Đi tới borrow / return
             </Link>
@@ -141,13 +140,13 @@ export default async function LibrarianSearchPage({ searchParams }: SearchPagePr
           <div className="lg:col-span-3 flex flex-wrap gap-3">
             <button
               type="submit"
-              className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="ui-button-primary px-4 py-3 text-sm font-semibold"
             >
               Áp dụng bộ lọc
             </button>
             <Link
               href={buildHref(APP_ROUTES.librarianSearch, { limit: filters.limit })}
-              className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+              className="ui-button-secondary px-4 py-3 text-sm font-semibold"
             >
               Xóa bộ lọc
             </Link>

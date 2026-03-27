@@ -21,11 +21,13 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <article
-      className={`rounded-[1.75rem] bg-linear-to-br p-5 shadow-lg shadow-slate-900/5 ${accentClasses[accent]}`}
+      className={`flex min-h-[11rem] flex-col rounded-[1.75rem] bg-linear-to-br p-5 shadow-lg shadow-slate-900/5 ${accentClasses[accent]}`}
     >
       <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">{label}</p>
-      <p className="mt-4 text-3xl font-semibold tracking-tight">{value}</p>
-      <p className="mt-2 text-sm text-white/75">{hint}</p>
+      <div className="mt-auto space-y-2 pt-8">
+        <p className="text-3xl font-semibold tracking-tight">{value}</p>
+        <p className="text-sm leading-6 text-white/75">{hint}</p>
+      </div>
     </article>
   );
 }

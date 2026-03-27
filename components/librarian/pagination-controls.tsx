@@ -28,10 +28,10 @@ export function PaginationControls({
         <Link
           href={buildHref(pathname, { ...params, [pageParamName]: page - 1 })}
           aria-disabled={page <= 1}
-          className={`rounded-xl border px-3 py-2 ${
+          className={`rounded-xl px-3 py-2 ${
             page <= 1
-              ? "pointer-events-none border-slate-200 text-slate-300"
-              : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+              ? "ui-button-secondary pointer-events-none opacity-45"
+              : "ui-button-secondary"
           }`}
         >
           Trang trước
@@ -39,10 +39,10 @@ export function PaginationControls({
         <Link
           href={buildHref(pathname, { ...params, [pageParamName]: page + 1 })}
           aria-disabled={page >= totalPages}
-          className={`rounded-xl border px-3 py-2 ${
+          className={`rounded-xl px-3 py-2 ${
             page >= totalPages
-              ? "pointer-events-none border-slate-200 text-slate-300"
-              : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+              ? "ui-button-secondary pointer-events-none opacity-45"
+              : "ui-button-secondary"
           }`}
         >
           Trang sau

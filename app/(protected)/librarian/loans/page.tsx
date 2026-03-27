@@ -29,8 +29,7 @@ interface LoansPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-const inputClass =
-  "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500";
+const inputClass = "ui-input w-full px-4 py-3 text-sm";
 const textareaClass = `${inputClass} min-h-28 resize-y`;
 
 function formatLocalDate(value: Date): string {
@@ -100,13 +99,13 @@ export default async function LibrarianLoansPage({ searchParams }: LoansPageProp
             <>
               <Link
                 href={APP_ROUTES.librarianReports}
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+                className="ui-button-secondary px-4 py-3 text-sm font-semibold"
               >
                 Xem báo cáo
               </Link>
               <Link
                 href={APP_ROUTES.librarianSearch}
-                className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="ui-button-primary px-4 py-3 text-sm font-semibold"
               >
                 Tra cứu catalog
               </Link>
@@ -201,7 +200,7 @@ export default async function LibrarianLoansPage({ searchParams }: LoansPageProp
               <SubmitButton
                 label="Lập phiếu mượn"
                 pendingLabel="Đang tạo phiếu..."
-                className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="ui-button-primary w-full px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               />
             </form>
           </section>
@@ -290,7 +289,7 @@ export default async function LibrarianLoansPage({ searchParams }: LoansPageProp
                 <SubmitButton
                   label="Ghi nhận trả sách"
                   pendingLabel="Đang xử lý..."
-                  className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="ui-button-primary w-full px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </form>
             ) : (
@@ -352,13 +351,13 @@ export default async function LibrarianLoansPage({ searchParams }: LoansPageProp
               <div className="flex flex-wrap gap-3">
                 <button
                   type="submit"
-                  className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  className="ui-button-primary px-4 py-3 text-sm font-semibold"
                 >
                   Lọc phiếu mượn
                 </button>
                 <Link
                   href={buildHref(APP_ROUTES.librarianLoans, { limit: filters.limit })}
-                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+                  className="ui-button-secondary px-4 py-3 text-sm font-semibold"
                 >
                   Xóa bộ lọc
                 </Link>

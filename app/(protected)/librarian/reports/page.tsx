@@ -24,8 +24,7 @@ interface ReportsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-const inputClass =
-  "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500";
+const inputClass = "ui-input w-full px-4 py-3 text-sm";
 
 function formatLocalDate(value: Date): string {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(
@@ -131,13 +130,13 @@ export default async function LibrarianReportsPage({ searchParams }: ReportsPage
           <>
             <Link
               href={APP_ROUTES.librarianLoans}
-              className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+              className="ui-button-secondary px-4 py-3 text-sm font-semibold"
             >
               Quay lại loans
             </Link>
             <Link
               href={APP_ROUTES.librarianSearch}
-              className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="ui-button-primary px-4 py-3 text-sm font-semibold"
             >
               Tra cứu catalog
             </Link>
@@ -176,7 +175,7 @@ export default async function LibrarianReportsPage({ searchParams }: ReportsPage
           <input className={inputClass} type="date" name="to" defaultValue={to} />
           <button
             type="submit"
-            className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="ui-button-primary px-4 py-3 text-sm font-semibold"
           >
             Cập nhật kỳ báo cáo
           </button>
@@ -279,7 +278,7 @@ export default async function LibrarianReportsPage({ searchParams }: ReportsPage
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={reader.trang_thai} />
-                      <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                      <span className="rounded-full border border-[#dce9fb] bg-[#edf4ff] px-3 py-1 text-xs font-semibold text-[#132b49]">
                         {formatCount(reader.so_phieu_muon_dang_mo)} loan mở
                       </span>
                     </div>

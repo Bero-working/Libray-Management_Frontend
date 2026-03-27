@@ -83,13 +83,13 @@ export default async function LibrarianDashboardPage() {
           <>
             <Link
               href={APP_ROUTES.librarianLoans}
-              className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="ui-button-primary min-h-12 px-5 py-3 text-sm font-semibold"
             >
               Xử lý mượn / trả
             </Link>
             <Link
               href={APP_ROUTES.librarianSearch}
-              className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+              className="ui-button-secondary min-h-12 px-5 py-3 text-sm font-semibold"
             >
               Tra cứu catalog
             </Link>
@@ -97,7 +97,7 @@ export default async function LibrarianDashboardPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Đầu sách"
           value={formatCount(titles.length)}
@@ -124,9 +124,9 @@ export default async function LibrarianDashboardPage() {
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.25fr,0.75fr]">
-        <section className="rounded-[2rem] border border-slate-200 bg-white/90 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
+        <section className="min-w-0 rounded-[2rem] border border-slate-200 bg-white/90 shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">Top borrowed titles</h2>
               <p className="text-sm text-slate-500">
@@ -182,8 +182,8 @@ export default async function LibrarianDashboardPage() {
           )}
         </section>
 
-        <section className="rounded-[2rem] border border-slate-200 bg-white/90 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <section className="min-w-0 rounded-[2rem] border border-slate-200 bg-white/90 shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">Readers chưa trả sách</h2>
               <p className="text-sm text-slate-500">
@@ -204,7 +204,7 @@ export default async function LibrarianDashboardPage() {
                   key={reader.ma_doc_gia}
                   className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-semibold text-slate-900">{reader.ho_ten}</p>
                       <p className="text-sm text-slate-500">
@@ -240,8 +240,8 @@ export default async function LibrarianDashboardPage() {
         </section>
       </div>
 
-      <section className="rounded-[2rem] border border-slate-200 bg-white/90 shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+      <section className="min-w-0 rounded-[2rem] border border-slate-200 bg-white/90 shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-950">Phiếu mượn đang mở gần nhất</h2>
             <p className="text-sm text-slate-500">5 giao dịch BORROWED mới nhất</p>

@@ -24,8 +24,7 @@ interface TitlesPageProps {
 }
 
 const labelClass = "text-xs font-semibold uppercase tracking-[0.24em] text-slate-500";
-const inputClass =
-  "mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500";
+const inputClass = "mt-2 ui-input w-full px-4 py-3 text-sm";
 
 export default async function LibrarianTitlesPage({ searchParams }: TitlesPageProps) {
   const resolvedSearchParams = await searchParams;
@@ -85,13 +84,13 @@ export default async function LibrarianTitlesPage({ searchParams }: TitlesPagePr
           <>
             <Link
               href={APP_ROUTES.librarianCopies}
-              className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+              className="ui-button-secondary px-4 py-3 text-sm font-semibold"
             >
               Xem bản sao
             </Link>
             <Link
               href={APP_ROUTES.librarianSearch}
-              className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="ui-button-primary px-4 py-3 text-sm font-semibold"
             >
               Tra cứu catalog
             </Link>
@@ -117,11 +116,11 @@ export default async function LibrarianTitlesPage({ searchParams }: TitlesPagePr
                   name="query"
                   defaultValue={query}
                   placeholder="Tìm theo mã, tên sách, tác giả, chuyên ngành"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                  className="ui-input w-full px-4 py-3 text-sm"
                 />
                 <button
                   type="submit"
-                  className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  className="ui-button-primary px-4 py-3 text-sm font-semibold"
                 >
                   Lọc
                 </button>
@@ -322,7 +321,7 @@ export default async function LibrarianTitlesPage({ searchParams }: TitlesPagePr
               <SubmitButton
                 label={selectedTitle ? "Lưu cập nhật" : "Tạo đầu sách"}
                 pendingLabel={selectedTitle ? "Đang lưu..." : "Đang tạo..."}
-                className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="ui-button-primary w-full px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               />
             </form>
           </section>
@@ -353,7 +352,7 @@ export default async function LibrarianTitlesPage({ searchParams }: TitlesPagePr
                 <SubmitButton
                   label="Xóa đầu sách"
                   pendingLabel="Đang xoá..."
-                  className="w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="ui-button-danger w-full px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </form>
             </section>

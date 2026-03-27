@@ -21,8 +21,7 @@ interface CopiesPageProps {
 }
 
 const labelClass = "text-xs font-semibold uppercase tracking-[0.24em] text-slate-500";
-const inputClass =
-  "mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500";
+const inputClass = "mt-2 ui-input w-full px-4 py-3 text-sm";
 
 export default async function LibrarianCopiesPage({ searchParams }: CopiesPageProps) {
   const resolvedSearchParams = await searchParams;
@@ -80,13 +79,13 @@ export default async function LibrarianCopiesPage({ searchParams }: CopiesPagePr
           <>
             <Link
               href={APP_ROUTES.librarianTitles}
-              className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+              className="ui-button-secondary px-4 py-3 text-sm font-semibold"
             >
               Quản lý đầu sách
             </Link>
             <Link
               href={APP_ROUTES.librarianLoans}
-              className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="ui-button-primary px-4 py-3 text-sm font-semibold"
             >
               Mở borrow / return
             </Link>
@@ -105,12 +104,12 @@ export default async function LibrarianCopiesPage({ searchParams }: CopiesPagePr
                 name="query"
                 defaultValue={query}
                 placeholder="Lọc theo mã bản sao, mã đầu sách, tên sách"
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                className="ui-input w-full px-4 py-3 text-sm"
               />
               <select
                 name="status"
                 defaultValue={status}
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                className="ui-input w-full px-4 py-3 text-sm"
               >
                 <option value="">Tất cả tình trạng</option>
                 <option value="AVAILABLE">AVAILABLE</option>
@@ -121,7 +120,7 @@ export default async function LibrarianCopiesPage({ searchParams }: CopiesPagePr
               </select>
               <button
                 type="submit"
-                className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="ui-button-primary px-4 py-3 text-sm font-semibold"
               >
                 Áp dụng
               </button>
@@ -292,7 +291,7 @@ export default async function LibrarianCopiesPage({ searchParams }: CopiesPagePr
               <SubmitButton
                 label={selectedCopy ? "Lưu cập nhật" : "Thêm bản sao"}
                 pendingLabel={selectedCopy ? "Đang lưu..." : "Đang thêm..."}
-                className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="ui-button-primary w-full px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               />
             </form>
           </section>
@@ -320,7 +319,7 @@ export default async function LibrarianCopiesPage({ searchParams }: CopiesPagePr
                 <SubmitButton
                   label="Xóa bản sao"
                   pendingLabel="Đang xoá..."
-                  className="w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="ui-button-danger w-full px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </form>
             </section>

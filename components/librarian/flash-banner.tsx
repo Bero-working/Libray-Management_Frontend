@@ -6,8 +6,8 @@ interface FlashBannerProps {
 export function FlashBanner({ tone, message }: FlashBannerProps) {
   const classes =
     tone === "success"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-      : "border-red-200 bg-red-50 text-red-700";
+      ? "ui-banner-success"
+      : "ui-banner-error";
 
   return (
     <div className={`rounded-2xl border px-4 py-3 text-sm shadow-sm ${classes}`}>
