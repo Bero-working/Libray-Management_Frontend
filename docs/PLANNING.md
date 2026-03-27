@@ -1,397 +1,296 @@
-# Frontend Implementation Planning
+# PLANNING
 
-## 1. Nguồn chuẩn để bám theo
+## 1. Context
 
-Kế hoạch này được suy ra từ 3 tài liệu nguồn và phải luôn ưu tiên theo thứ tự sau:
+Người dùng muốn có một kế hoạch triển khai dựa trên các prototype giao diện `UI/admin-layout.html`, `UI/librarian-layout.html` và các tài liệu `docs/SRS.md`, `docs/API_REFERENCE.md`, `docs/DATABASE_SCHEMA.md`. Mục tiêu là chia roadmap thành từng phase theo actor để chuyển từ wireframe tĩnh sang ứng dụng vận hành thật, đồng bộ giữa UI, API và ràng buộc dữ liệu.
 
-1. `docs/SRS.md` – phạm vi nghiệp vụ, actor, FR, BR, MVP.
-2. `docs/API_REFERENCE.md` – contract API, RBAC, envelope response, lỗi nghiệp vụ.
-3. `docs/DATABASE_SCHEMA.md` – domain model, enum, quan hệ dữ liệu, các ràng buộc ảnh hưởng UI.
-
-> Lưu ý: frontend hiện vẫn gần như là scaffold mặc định của Next.js, nên phải triển khai từ nền tảng dùng chung trước rồi mới đi vào từng module nghiệp vụ.
-
----
-
-## 2. Mục tiêu MVP frontend
-
-Xây dựng giao diện quản lý thư viện cho 3 vai trò nội bộ:
-
-- `ADMIN`: quản lý nhân viên, tài khoản, phân quyền.
-- `LIBRARIAN`: quản lý độc giả, chuyên ngành, đầu sách, bản sao, mượn–trả, báo cáo.
-- `LEADER`: chỉ xem báo cáo.
-
-Frontend phải bao phủ được các màn hình MVP đã nêu trong `docs/SRS.md`, đồng thời phản ánh đúng các business rule trọng yếu trong luồng UI chứ không chỉ đẩy lỗi về backend.
+Từ tài liệu hiện tại:
+- Actor chính gồm: `LIBRARIAN`, `ADMIN`, `LEADER`, và `Reader` (gián tiếp).
+- Prototype UI đã có khung chính cho librarian/admin nhưng còn tĩnh và chưa phủ hết các màn hình trong SRS.
+- API runtime đã được mô tả là có đủ các nhóm endpoint cốt lõi: auth, readers, majors, titles, copies, loans, reports, staff, accounts, search.
+- Business rules quan trọng đã rõ: mỗi độc giả chỉ có tối đa 1 phiếu mượn chưa trả, chỉ copy `AVAILABLE` mới được mượn, trả sách phải đồng bộ trạng thái loan/copy, và nhiều thao tác xóa bị chặn bởi dữ liệu phụ thuộc.
+- `FR-25` (audit trail) chưa được bao phủ đầy đủ nên nên được tách thành future phase.
 
 ---
 
-## 3. Định hướng kiến trúc frontend
+## 2. Scope và assumptions
 
-### 3.1 Kiến trúc thư mục đề xuất
+### 2.1 Scope
+- Xây dựng web app nội bộ theo role cho `LIBRARIAN`, `ADMIN`, `LEADER`.
+- Tích hợp UI với API đã được đặc tả trong `docs/API_REFERENCE.md`.
+- Hoàn thiện các màn hình CRUD, tra cứu, mượn/trả, báo cáo theo đúng SRS.
+- Thiết kế frontend đủ chặt để phản ánh đúng các business rule từ schema/docs.
 
-- `app/`: route, layout, loading, error, route guard ở mức App Router.
-- `features/`: module nghiệp vụ theo domain.
-- `shared/`: UI dùng chung, table, dialog, pagination, badge, form field.
-- `lib/`: API client, auth/session, permission helpers, enum mappers, query param helpers.
-
-### 3.2 Tổ chức route đề xuất
-
-```text
-app/
-  (public)/login/page.tsx
-  (protected)/layout.tsx
-  (protected)/page.tsx
-  (protected)/(librarian)/readers/page.tsx
-  (protected)/(librarian)/majors/page.tsx
-  (protected)/(librarian)/titles/page.tsx
-  (protected)/(librarian)/copies/page.tsx
-  (protected)/(librarian)/search/books/page.tsx
-  (protected)/(librarian)/loans/page.tsx
-  (protected)/(librarian)/loans/new/page.tsx
-  (protected)/(librarian)/loans/[id]/page.tsx
-  (protected)/(reports)/reports/top-borrowed-titles/page.tsx
-  (protected)/(reports)/reports/unreturned-readers/page.tsx
-  (protected)/(admin)/staff/page.tsx
-  (protected)/(admin)/accounts/page.tsx
-```
-
-### 3.3 Nguyên tắc kỹ thuật
-
-- Ưu tiên App Router và server-first rendering.
-- Chỉ dùng `"use client"` cho component tương tác thực sự.
-- Chuẩn hóa API client để xử lý thống nhất token, success envelope, error envelope.
-- Tập trung tách domain theo `auth`, `readers`, `majors`, `titles`, `copies`, `search`, `loans`, `reports`, `staff`, `accounts`.
-- Tạo một lớp mapping enum/label dùng chung ngay từ đầu để tránh lệch dữ liệu UI.
-- Form và dữ liệu nhập phải đi qua schema validation tập trung, ưu tiên Zod.
-- API state phải đi qua query/mutation pattern thống nhất, ưu tiên TanStack Query.
-- Shared UI primitives phải được xây trên shadcn/ui kết hợp Tailwind CSS để tránh phân mảnh giao diện.
-- Tránh phát sinh nhiều pattern styling, fetch state và form handling song song giữa các module.
-
-### 3.4 Frontend stack chuẩn hóa
-
-Frontend stack được chuẩn hóa theo các quyết định sau:
-
-- **Tailwind CSS** là chuẩn styling chính cho layout, spacing, responsive behavior và theme token cơ bản.
-- **shadcn/ui** là nền cho shared UI primitives và component composition; các module mới phải ưu tiên tái sử dụng từ hệ này thay vì tự tạo thêm nhiều bộ UI song song.
-- **TanStack Query** là chuẩn cho API fetching, caching, mutation state, loading/error state và invalidation cho server state.
-- **Zod** là chuẩn cho runtime validation của form, filter input và các input boundary phía frontend.
-
-Hiện trạng repo cần được phản ánh đúng khi triển khai theo tài liệu này:
-
-- Tailwind CSS đã hiện diện trong repo (`package.json`, `app/globals.css`).
-- TanStack Query, shadcn/ui và Zod hiện chưa được cài đặt/cấu hình trong project và phải được đưa vào như foundation work ở Phase 0.
+### 2.2 Assumptions
+- API contract trong `docs/API_REFERENCE.md` là nguồn chuẩn để tích hợp.
+- `Reader` không có portal riêng ở giai đoạn hiện tại; chỉ xuất hiện như dữ liệu/luồng nghiệp vụ do librarian/admin thao tác.
+- Các prototype HTML hiện tại được dùng làm nguồn UI/UX baseline, không phải kiến trúc React/Next cuối cùng.
+- `FR-25` sẽ được giữ như phase sau, nhưng các module hiện tại nên được thiết kế theo hướng dễ gắn audit sau này.
 
 ---
 
-## 4. Các business rule bắt buộc phải phản ánh trên UI
+## 3. Shared foundation
 
-Những rule sau phải được thể hiện rõ trong UI/UX, không chỉ xử lý ở backend:
+### Phase 0 — Shared foundation
 
-- `BR-01`: chưa đăng nhập thì không được vào protected routes.
-- `FR-02`: menu, route, action button phải ẩn/disable theo role.
-- `BR-04`: một độc giả chỉ được có tối đa 01 phiếu mượn chưa trả.
-- `BR-06`: chỉ bản sao có trạng thái `AVAILABLE` mới được phép cho mượn.
-- `BR-08`: không cho xóa bản sao đang mượn hoặc còn gắn giao dịch chưa hoàn tất.
-- `BR-09`: không cho xóa độc giả nếu còn sách chưa trả.
-- `BR-10`: sau khi lập phiếu mượn, UI phải phản ánh trạng thái bản sao thành `BORROWED`.
-- `BR-11`: khi trả sách, trạng thái phiếu mượn và bản sao phải cập nhật đồng bộ.
-- `BR-12`: báo cáo đầu sách mượn nhiều phải tính theo đầu sách, không theo từng bản sao.
+**Mục tiêu**
+- Dựng nền tảng dùng chung cho toàn app trước khi chia theo actor.
+- Chuẩn hóa auth, app shell, route guard, data fetching, error handling, validation mapping.
 
----
+**Phạm vi**
+- Login chung và điều hướng theo role.
+- Layout shell dùng lại tinh thần từ `UI/admin-layout.html` và `UI/librarian-layout.html`.
+- RBAC ở cấp route/menu/component.
+- API client thống nhất, loading/error/empty states, mapping lỗi backend sang thông báo UI.
 
-## 5. Phase roadmap
+**Màn hình/chức năng**
+- Login
+- App shell
+- Sidebar/topbar theo role
+- Route protection và redirect sau login
 
-## Phase 0 – Shared foundation
+**API / entity liên quan**
+- Auth APIs: `/auth/login`, `/auth/refresh`, `/auth/logout`
+- Role mapping từ account/user payload
 
-### Mục tiêu
-Tạo bộ khung frontend dùng chung để các module sau chỉ việc cắm vào.
+**Phụ thuộc**
+- `docs/API_REFERENCE.md`
+- `UI/admin-layout.html`
+- `UI/librarian-layout.html`
 
-### Phạm vi
-- Root layout và protected shell.
-- Sidebar/topbar/breadcrumb/page header.
-- Chuẩn hóa styling convention với Tailwind CSS làm nền mặc định cho layout và UI spacing.
-- Shared UI primitives dựa trên shadcn/ui: button, input, select, textarea, modal, confirm dialog.
-- Shared states: loading, empty, error, table, pagination.
-- API client nền: bearer token, JSON parsing, error normalization, file download cho PDF.
-- Thiết lập query/cache/mutation conventions bằng TanStack Query cho server state.
-- Session/auth helpers và permission helpers.
-- Thiết lập validation strategy bằng Zod cho auth form, filter form và CRUD form.
-- Enum mappers cho `ReaderStatus`, `Gender`, `BookCopyStatus`, `LoanStatus`, `AccountRole`.
-- Chuẩn hóa integration giữa API client và query layer để các phase sau không tự fetch rời rạc.
-
-### Deliverables
-- App shell cho khu vực protected.
-- Shared UI kit cơ bản dựa trên shadcn/ui + Tailwind CSS.
-- `lib/api-client`, `lib/auth`, `lib/permissions`, `lib/enums`.
-- Query/cache foundation cho API state.
-- Validation schema conventions cho form và payload.
-
-### Exit criteria
-- Có thể dựng nhanh một page protected với layout chuẩn.
-- Có thể gọi API có token và xử lý lỗi theo contract.
-- Có một pattern thống nhất cho API loading/error state để các module sau tái sử dụng.
-- Có ít nhất một form mẫu được xác định sẽ đi theo schema validation chuẩn.
-- Stack foundation được chốt đủ để các phase sau không phải chọn lại styling/UI/query/validation approach.
+**Acceptance checkpoints**
+- Đăng nhập thành công và redirect đúng role.
+- Người dùng không đúng role không truy cập được route bị chặn.
+- App shell hiển thị menu đúng theo actor.
+- Các trạng thái loading/error thống nhất toàn hệ thống.
 
 ---
 
-## Phase 1 – Auth, RBAC, dashboard
+## 4. Roadmap theo actor
 
-### Mục tiêu
-Hoàn thiện điểm vào hệ thống và điều hướng theo vai trò.
+### Phase 1 — Librarian core operations
 
-### API liên quan
-- `POST /auth/login`
+**Mục tiêu**
+- Hoàn thiện actor vận hành chính của hệ thống.
+- Ưu tiên các luồng có giá trị nghiệp vụ cao nhất: tra cứu, đầu sách, bản sao, mượn/trả, báo cáo vận hành.
 
-### Phạm vi
-- Login page.
-- Lưu phiên đăng nhập.
-- Route protection cho khu vực protected.
-- Dashboard/landing page theo role.
-- Unauthorized/access denied state.
-- Login form là use case đầu tiên áp dụng validation schema bằng Zod.
-- Auth flow là use case đầu tiên áp dụng mutation/error handling pattern theo TanStack Query.
-- Dashboard, login và unauthorized state phải tái sử dụng shared UI primitives từ shadcn/ui + Tailwind CSS.
+**Màn hình**
+- Librarian Dashboard
+- Quản lý đầu sách
+- Quản lý bản sao sách
+- Tra cứu sách
+- Xử lý mượn / trả
+- Báo cáo vận hành / overdue / top borrowed
 
-### Điều kiện UI cần thể hiện
-- `AUTH_INVALID_CREDENTIALS` hiển thị inline ở form.
-- `AUTH_ACCOUNT_INACTIVE` hiển thị rõ lý do bị chặn.
-- `ADMIN`, `LIBRARIAN`, `LEADER` nhìn thấy menu khác nhau.
-- Client-side validation và hiển thị lỗi inline phải đi theo schema thống nhất.
-- Loading/submitting/error state của login phải đi theo API state pattern thống nhất.
-
-### Exit criteria
-- Đăng nhập thành công và điều hướng đúng vai trò.
-- Không thể truy cập route protected khi chưa có phiên.
-- Auth flow đóng vai trò reference implementation đầu tiên cho stack đã chuẩn hóa.
-
----
-
-## Phase 2 – Danh mục nền nghiệp vụ
-
-### Mục tiêu
-Xây xong lớp dữ liệu gốc cho các luồng mượn–trả.
-
-### Thứ tự triển khai
-1. Readers
-2. Majors
-3. Titles
-4. Copies
-
-### 2.1 Readers
-API:
-- `GET /readers`
-- `GET /readers/{ma_doc_gia}`
-- `POST /readers`
-- `PATCH /readers/{ma_doc_gia}`
-- `DELETE /readers/{ma_doc_gia}`
-- `POST /readers/{ma_doc_gia}/print-card`
-
-Yêu cầu UI:
-- Danh sách + filter + pagination.
-- Form tạo/sửa độc giả.
-- In thẻ thư viện từ endpoint PDF.
-- Delete phải xử lý rõ lỗi `BR_09_READER_HAS_UNRETURNED_LOAN`.
-
-### 2.2 Majors
-API:
-- `GET/POST /majors`
-- `GET/PATCH/DELETE /majors/{ma_chuyen_nganh}`
-
-Yêu cầu UI:
-- Danh sách CRUD gọn, phục vụ dữ liệu tham chiếu cho đầu sách.
-
-### 2.3 Titles
-API:
-- `GET/POST /titles`
-- `GET/PATCH/DELETE /titles/{ma_dau_sach}`
-
-Yêu cầu UI:
-- Form gắn chuyên ngành.
-- Hiển thị dữ liệu đầu sách theo góc nhìn domain.
-- Không giả định `so_luong_sach` là trường nhập nếu backend coi đó là giá trị suy ra.
-
-### 2.4 Copies
-API:
-- `GET/POST /copies`
-- `GET/PATCH/DELETE /copies/{ma_sach}`
-
-Yêu cầu UI:
-- Danh sách bản sao theo `ma_dau_sach`, `tinh_trang`.
-- Badge trạng thái rõ cho `AVAILABLE`, `BORROWED`, `DAMAGED`, `LOST`, `NEEDS_REVIEW`.
-- Delete phải phản ánh đúng constraint nghiệp vụ.
-
-### Exit criteria
-- CRUD các danh mục nền hoạt động ổn định.
-- Có thể tạo đủ dữ liệu để đi tiếp sang nghiệp vụ mượn–trả.
-
----
-
-## Phase 3 – Tra cứu và tác vụ quầy thủ thư
-
-### Mục tiêu
-Tối ưu thao tác hằng ngày của thủ thư tại quầy.
-
-### API liên quan
+**API / entity liên quan**
+- `GET/POST/PATCH/DELETE /titles`
+- `GET/POST/PATCH/DELETE /copies`
 - `GET /search/books`
-
-### Phạm vi
-- Trang tra cứu sách theo nhiều tiêu chí.
-- Quick actions từ dashboard: tạo độc giả, tra cứu, lập phiếu mượn, trả sách.
-
-### Yêu cầu UI
-- Hỗ trợ tra cứu theo mã đầu sách, tên sách, tác giả, chuyên ngành, mã sách, tình trạng.
-- Từ kết quả tra cứu có thể điều hướng nhanh sang chi tiết đầu sách/bản sao hoặc luồng mượn.
-
-### Exit criteria
-- Thủ thư có thể tìm nhanh sách và đi vào luồng thao tác chỉ qua vài bước.
-
----
-
-## Phase 4 – Mượn và trả sách
-
-### Mục tiêu
-Hoàn thiện core flow của hệ thống.
-
-### API liên quan
-- `GET /loans`
-- `GET /loans/{id}`
-- `POST /loans`
-- `PATCH /loans/{id}/return`
-
-### Phạm vi
-- Danh sách phiếu mượn.
-- Chi tiết phiếu mượn.
-- Tạo phiếu mượn.
-- Ghi nhận trả sách.
-
-### Yêu cầu UI chính
-- Form mượn phải kiểm tra reader và bản sao trước khi submit.
-- Nếu độc giả đang có phiếu mượn chưa trả thì phải chặn rõ theo business message.
-- Nếu bản sao không ở trạng thái `AVAILABLE` thì disable submit.
-- Khi mượn thành công, cập nhật trạng thái bản sao thành `BORROWED` trong UI.
-- Khi trả sách:
-  - trả về `AVAILABLE` -> loan thành `RETURNED`
-  - trả về `DAMAGED`, `LOST`, `NEEDS_REVIEW` -> loan thành `NEEDS_REVIEW`
-
-### Exit criteria
-- Luồng mượn–trả hoàn chỉnh từ list -> detail -> action.
-- Các rule `BR-04`, `BR-06`, `BR-10`, `BR-11` được phản ánh đúng trên UI.
-
----
-
-## Phase 5 – Báo cáo
-
-### Mục tiêu
-Phục vụ nhu cầu theo dõi vận hành cho thủ thư và lãnh đạo.
-
-### API liên quan
+- `GET /loans`, `GET /loans/{id}`, `POST /loans`, `PATCH /loans/{id}/return`
 - `GET /reports/top-borrowed-titles`
 - `GET /reports/unreturned-readers`
+- Entities: `DAU_SACH`, `BAN_SAO_SACH`, `PHIEU_MUON`, `DOC_GIA`
 
-### Phạm vi
-- Báo cáo đầu sách được mượn nhiều nhất.
-- Báo cáo độc giả chưa trả sách.
-- Phân quyền xem cho `LIBRARIAN` và `LEADER`.
+**Business rules cần phản ánh ở UI**
+- Mỗi độc giả chỉ được có tối đa 1 phiếu mượn chưa trả.
+- Chỉ copy `AVAILABLE` mới được cho mượn.
+- Trả sách phải cập nhật đồng bộ `Loan.status` và `BookCopyStatus`.
+- Các thao tác xóa phải phản ánh lỗi phụ thuộc từ backend rõ ràng.
 
-### Yêu cầu UI
-- Top borrowed phải hiển thị theo đầu sách.
-- Unreturned readers phải nhấn mạnh độc giả, sách đang giữ, ngày mượn.
-- `LEADER` chỉ thấy dashboard/report scope, không thấy CRUD nghiệp vụ.
+**Phụ thuộc**
+- Phase 0 hoàn tất.
+- Data layer và validation mapping ổn định.
 
-### Exit criteria
-- Có đủ 2 báo cáo MVP như SRS.
+**Acceptance checkpoints**
+- Tạo/sửa/xem title hoạt động đúng.
+- Tạo/sửa/xem copy hoạt động đúng.
+- Luồng mượn sách chặn đúng khi reader đang có open loan.
+- Luồng trả sách cập nhật đúng trạng thái copy/loan.
+- Báo cáo top borrowed và unreturned readers hiển thị đúng dữ liệu API.
+
+### Phase 2 — Admin management
+
+**Mục tiêu**
+- Hoàn thiện actor quản trị hệ thống.
+- Đóng các gap còn thiếu giữa prototype và SRS/API: majors management, full account CRUD, staff management rõ ràng.
+
+**Màn hình**
+- Admin Dashboard
+- Quản lý độc giả
+- Quản lý nhân viên
+- Quản lý tài khoản & phân quyền
+- Quản lý chuyên ngành
+
+**API / entity liên quan**
+- `GET/POST/PATCH/DELETE /readers`
+- `POST /readers/{ma_doc_gia}/print-card`
+- `GET/POST/PATCH/DELETE /staff`
+- `GET/POST/PATCH/DELETE /accounts`
+- `GET/POST/PATCH/DELETE /majors`
+- Entities: `DOC_GIA`, `NHAN_VIEN`, `TAI_KHOAN`, `CHUYEN_NGANH`
+
+**Business rules cần phản ánh ở UI**
+- Không xóa reader nếu còn sách chưa trả.
+- Không xóa major nếu còn title tham chiếu.
+- Account phải gắn đúng staff và role hợp lệ.
+- Validation mã định danh unique phải được thể hiện rõ ở form.
+
+**Phụ thuộc**
+- Phase 0.
+- Có thể tái sử dụng table/form pattern từ Phase 1.
+
+**Acceptance checkpoints**
+- CRUD readers/staff/accounts/majors hoạt động đầy đủ.
+- In thẻ thư viện gọi đúng API và xử lý đúng kiểu response PDF.
+- Role assignment được enforce đúng ở UI.
+- Xử lý lỗi backend/business rule rõ ràng, không mơ hồ.
+
+### Phase 3 — Leader reporting
+
+**Mục tiêu**
+- Tạo trải nghiệm riêng cho actor `LEADER` thay vì chỉ dùng chung màn báo cáo của librarian.
+- Tập trung vào dashboard và reporting read-only.
+
+**Màn hình**
+- Leader Dashboard
+- Báo cáo top borrowed titles
+- Báo cáo độc giả chưa trả
+- Bộ lọc theo thời gian / drill-down nếu API hỗ trợ
+
+**API / entity liên quan**
+- `GET /reports/top-borrowed-titles`
+- `GET /reports/unreturned-readers`
+- Có thể dùng thêm `GET /search/books` cho luồng drill-down nhẹ
+- Entities: tổng hợp từ `PHIEU_MUON`, `BAN_SAO_SACH`, `DAU_SACH`, `DOC_GIA`
+
+**Phụ thuộc**
+- Phase 0.
+- Báo cáo runtime đã ổn định từ Phase 1.
+
+**Acceptance checkpoints**
+- Leader chỉ thấy các route/report được phân quyền.
+- Bộ lọc thời gian hoạt động đúng theo contract API.
+- Màn hình báo cáo phù hợp tác vụ read-only, không lẫn chức năng quản trị.
+
+### Phase 4 — Reader-facing indirect flows
+
+**Mục tiêu**
+- Không tạo portal riêng cho reader, nhưng hoàn thiện các điểm chạm liên quan tới reader trong module admin/librarian.
+- Chuẩn hóa chi tiết độc giả, lịch sử mượn, trạng thái hiện tại.
+
+**Màn hình/chức năng**
+- Reader detail
+- Loan history trong hồ sơ reader
+- Trạng thái thẻ/thông tin cơ bản phục vụ tra cứu nhanh tại quầy
+
+**API / entity liên quan**
+- `GET /readers`
+- `GET /readers/{ma_doc_gia}`
+- `GET /loans`
+- `GET /loans/{id}`
+- Entities: `DOC_GIA`, `PHIEU_MUON`
+
+**Phụ thuộc**
+- Phase 1 và Phase 2.
+
+**Acceptance checkpoints**
+- Tra cứu reader nhanh từ mã/tên.
+- Hồ sơ reader hiển thị được trạng thái hiện tại và lịch sử mượn liên quan.
+- Dữ liệu reader nhất quán giữa admin và librarian modules.
 
 ---
 
-## Phase 6 – Quản trị nhân sự và tài khoản
+## 5. Future phase
 
-### Mục tiêu
-Hoàn thiện khu vực quản trị dành cho `ADMIN`.
+### Phase 5 — Audit trail / hardening
 
-### API liên quan
-- `GET/POST /staff`
-- `GET/PATCH/DELETE /staff/{ma_nhan_vien}`
-- `GET/POST /accounts`
-- `GET/PATCH/DELETE /accounts/{username}`
+**Mục tiêu**
+- Bổ sung phần còn thiếu của `FR-25` khi backend sẵn sàng.
+- Tăng mức sẵn sàng production: audit hooks, tracing, test coverage mở rộng, UX hardening.
 
-### Phạm vi
-- CRUD nhân viên.
-- CRUD tài khoản.
-- Gán role.
-- Trạng thái tài khoản/nhân viên.
+**Phạm vi**
+- Nhật ký thao tác create/update/delete.
+- Hiển thị lịch sử thay đổi nếu có endpoint phù hợp.
+- Chuẩn hóa event metadata theo actor/action/module.
 
-### Yêu cầu UI
-- Tách route/menu admin khỏi librarian.
-- Một nhân viên tối đa một tài khoản.
-- Role chỉ gồm `ADMIN`, `LIBRARIAN`, `LEADER`.
-- Cần hiển thị rõ mối liên kết giữa nhân viên và tài khoản.
-
-### Exit criteria
-- Admin có thể quản lý nhân viên và tài khoản đầy đủ theo SRS.
+**Acceptance checkpoints**
+- Có thể truy vết ai thao tác gì trên bản ghi chính.
+- Audit không làm hỏng các luồng cũ.
 
 ---
 
-## Phase 7 – Hardening và polish
+## 6. Risks và gaps từ tài liệu hiện tại
 
-### Mục tiêu
-Nâng chất lượng sử dụng và độ ổn định của hệ thống.
-
-### Phạm vi
-- `loading.tsx`, `error.tsx`, empty states.
-- Confirm flows thống nhất.
-- Search params sync URL.
-- Validate form tốt hơn.
-- Accessibility cơ bản cho form/table/dialog.
-- Chuẩn hóa thông báo lỗi nghiệp vụ theo `error.code`.
-
-### Exit criteria
-- Trải nghiệm giữa các module nhất quán.
-- Các lỗi nghiệp vụ phổ biến hiển thị rõ, dễ hiểu, không mơ hồ.
+- Prototype hiện thiếu các màn hình `majors` và account CRUD đầy đủ dù API đã có.
+- Chưa có UI riêng cho `LEADER` dù role này đã có trong docs và RBAC.
+- `readers` và `copies` runtime docs ghi nhận chưa hoàn chỉnh pagination/filtering, nên cần lên kế hoạch UI linh hoạt cho state hiện tại và dễ mở rộng sau.
+- `FR-25` chưa fully covered nên không nên giả định có sẵn audit UI/API ở giai đoạn đầu.
+- Wireframe tĩnh chưa mô tả đủ loading/error/empty/permission states.
 
 ---
 
-## 6. Trình tự phụ thuộc tổng thể
+## 7. Recommended delivery order
 
-Thứ tự khuyến nghị khi triển khai:
+1. **Phase 0** — Shared foundation
+2. **Phase 1** — Librarian core operations
+3. **Phase 2** — Admin management
+4. **Phase 3** — Leader reporting
+5. **Phase 4** — Reader-facing indirect flows
+6. **Phase 5** — Audit trail / hardening
 
-1. Shared foundation
-2. Auth + RBAC + dashboard
-3. Readers
-4. Majors
-5. Titles
-6. Copies
-7. Search books
-8. Loans
-9. Reports
-10. Staff
-11. Accounts
-12. Hardening
-
-Lý do:
-- `loans` phụ thuộc trực tiếp vào `readers` và `copies`.
-- `copies` phụ thuộc `titles`.
-- `titles` phụ thuộc `majors`.
-- `reports` phụ thuộc dữ liệu từ `loans`.
-- `staff/accounts` là domain tách biệt nhưng vẫn cần auth foundation trước.
-- Shared foundation phải khóa xong quyết định về Tailwind CSS, shadcn/ui, TanStack Query và Zod trước khi mở rộng sang module nghiệp vụ để tránh refactor hàng loạt.
+**Lý do ưu tiên**
+- Librarian là actor vận hành chính và tạo giá trị nghiệp vụ cao nhất.
+- Admin đứng sau để hoàn thiện quản trị dữ liệu và RBAC.
+- Leader reporting chỉ nên làm sau khi dữ liệu vận hành đã ổn định.
+- Audit trail là phase tăng cường sau cùng vì hiện docs cũng xác nhận chưa full coverage.
 
 ---
 
-## 7. Rủi ro và lưu ý khi triển khai
+## 8. Critical files
 
-- `README.md` hiện vẫn là README mặc định của create-next-app, không phải nguồn nghiệp vụ.
-- API query params chưa hoàn toàn đồng nhất giữa các nhóm endpoint (`page_size` và `limit` cùng xuất hiện), nên cần adapter layer ở frontend.
-- Endpoint in thẻ thư viện trả `application/pdf`, không đi theo JSON envelope.
-- `DAU_SACH.so_luong_sach` trong schema docs là giá trị suy ra, không nên mặc định coi là trường nhập liệu bắt buộc.
-- Repo hiện chưa có test runner trong `package.json`; cần ưu tiên lint/build cho giai đoạn đầu, và bổ sung test strategy sau khi kiến trúc frontend ổn định.
-- Tailwind CSS đã có trong repo nhưng hiện mới ở mức nền tảng, chưa đủ để coi là design system hoàn chỉnh.
-- TanStack Query, shadcn/ui và Zod hiện chưa được cài đặt/cấu hình; đây phải được xử lý như foundation work tập trung, không nên thêm rải rác theo từng feature.
-- Nếu không khóa stack từ planning, các phase sau dễ trộn nhiều pattern fetch, form validation và UI primitives, làm tăng chi phí refactor.
+- `docs/SRS.md`
+- `docs/API_REFERENCE.md`
+- `docs/DATABASE_SCHEMA.md`
+- `UI/admin-layout.html`
+- `UI/librarian-layout.html`
+- `docs/PLANNING.md`
 
 ---
 
-## 8. Kết luận
+## 9. Reuse notes
 
-Roadmap phù hợp nhất cho repo hiện tại là đi từ **shared foundations trước, nghiệp vụ sau**. Sau khi hoàn thiện auth, app shell, API client và permission layer, triển khai theo chuỗi phụ thuộc domain: **độc giả + danh mục sách -> mượn–trả -> báo cáo -> quản trị tài khoản**. Cách đi này giảm refactor, bám sát tài liệu nguồn, và phù hợp với trạng thái hiện tại của codebase.
+Các artifact nên được dùng làm nguồn chuẩn khi thực thi:
+- UI baseline và navigation pattern từ `UI/admin-layout.html`.
+- UI baseline và flow grouping cho librarian từ `UI/librarian-layout.html`.
+- API contract, role, enum, error semantics từ `docs/API_REFERENCE.md`.
+- Entity relationship và business rules từ `docs/DATABASE_SCHEMA.md`.
+- Actor/use-case/FR-BR traceability từ `docs/SRS.md`.
 
-Nền tảng frontend được chuẩn hóa theo **Tailwind CSS + shadcn/ui + TanStack Query + Zod** để đảm bảo tính nhất quán cho styling, UI primitives, API state và validation ngay từ Phase 0.
+---
+
+## 10. Verification strategy
+
+### 10.1 Tài liệu
+- Đối chiếu từng phase với actor/use case trong `docs/SRS.md`.
+- Đối chiếu từng màn hình planned với endpoint tương ứng trong `docs/API_REFERENCE.md`.
+- Đối chiếu từng business rule UI với constraint trong `docs/DATABASE_SCHEMA.md`.
+
+### 10.2 Kiểm thử theo actor
+- **Librarian:** title/copy/search/loan/return/report flows.
+- **Admin:** readers/staff/accounts/majors CRUD và role assignment.
+- **Leader:** report-only access và time filter behavior.
+
+### 10.3 Kiểm thử phân quyền
+- Tài khoản sai role không vào được route, menu, và action bị chặn.
+- Các action chỉ hiển thị khi actor có quyền.
+
+### 10.4 Kiểm thử ràng buộc nghiệp vụ
+- Không cho mượn nếu reader đang có loan mở.
+- Không cho mượn copy không ở trạng thái `AVAILABLE`.
+- Trả sách cập nhật đúng trạng thái `RETURNED` hoặc `NEEDS_REVIEW`.
+- Các case xóa vi phạm phụ thuộc trả lỗi đúng và UI hiển thị rõ.
+
+### 10.5 Kiểm thử tích hợp
+- Chạy ứng dụng, đăng nhập theo từng role và đi qua critical flows end-to-end.
+- Gọi API thật từ UI thay vì chỉ render dữ liệu mock.
+- Kiểm tra loading/error/empty states trên các màn hình danh sách và chi tiết.
