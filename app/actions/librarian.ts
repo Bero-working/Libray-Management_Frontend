@@ -4,7 +4,13 @@ import { redirect } from "next/navigation";
 
 import { apiRequest } from "@/lib/api/api-client";
 import { isApiError } from "@/lib/api/api-errors";
-import { copyEndpoints, loanEndpoints, readerEndpoints, titleEndpoints } from "@/lib/api/endpoints";
+import {
+  copyEndpoints,
+  loanEndpoints,
+  majorEndpoints,
+  readerEndpoints,
+  titleEndpoints,
+} from "@/lib/api/endpoints";
 import { requireSession } from "@/lib/auth/auth.session";
 import { assertRole } from "@/lib/auth/rbac";
 import { APP_ROUTES } from "@/lib/config/routes";
@@ -27,6 +33,12 @@ function readOptionalText(formData: FormData, name: string): string | undefined 
   const value = readText(formData, name);
 
   return value ? value : undefined;
+}
+
+function readNullableText(formData: FormData, name: string): string | null {
+  const value = readText(formData, name);
+
+  return value || null;
 }
 
 function readRequiredText(formData: FormData, name: string, label: string): string {
@@ -80,9 +92,12 @@ function translateApiError(error: unknown): string {
     "Copy not found": "Bản sao sách không tồn tại hoặc đã bị xóa.",
     "Reader not found": "Độc giả không tồn tại.",
     "Loan not found": "Không tìm thấy phiếu mượn.",
+    "Major code already exists": "Mã chuyên ngành đã tồn tại.",
     "Reader code already exists": "Mã độc giả đã tồn tại.",
     "Title code already exists": "Mã đầu sách đã tồn tại.",
     "Copy code already exists": "Mã bản sao đã tồn tại.",
+    "Cannot delete major with active titles":
+      "Không thể xóa chuyên ngành vì vẫn còn đầu sách đang tham chiếu.",
     "Failed to create loan": "Không thể lập phiếu mượn.",
     "Failed to return loan": "Không thể ghi nhận trả sách.",
   };
@@ -132,6 +147,18 @@ function buildReaderPayload(formData: FormData, withCode: boolean) {
   };
 }
 
+function buildMajorPayload(formData: FormData, withCode: boolean) {
+  return {
+    ...(withCode
+      ? {
+          ma_chuyen_nganh: readRequiredText(formData, "ma_chuyen_nganh", "Mã chuyên ngành"),
+        }
+      : {}),
+    ten_chuyen_nganh: readRequiredText(formData, "ten_chuyen_nganh", "Tên chuyên ngành"),
+    mo_ta: readNullableText(formData, "mo_ta"),
+  };
+}
+
 function buildTitlePayload(formData: FormData, withCode: boolean) {
   return {
     ...(withCode
@@ -159,6 +186,79 @@ function buildCopyPayload(formData: FormData, withCode: boolean) {
     tinh_trang: readRequiredText(formData, "tinh_trang", "Tình trạng") as BookCopyStatus,
     ngay_nhap: readRequiredText(formData, "ngay_nhap", "Ngày nhập"),
   };
+}
+
+export async function createMajorAction(formData: FormData): Promise<void> {
+  const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianMajors, {});
+
+  try {
+    await ensureLibrarian();
+    await apiRequest(majorEndpoints.list, {
+      method: "POST",
+      body: JSON.stringify(buildMajorPayload(formData, true)),
+    });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianMajors, {
+      notice: "Chuyên ngành mới đã được tạo.",
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof LibrarianValidationError ? error.message : translateApiError(error);
+
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianMajors, {
+      error: message,
+    });
+  }
+
+  redirect(nextHref);
+}
+
+export async function updateMajorAction(code: string, formData: FormData): Promise<void> {
+  const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianMajors, {});
+
+  try {
+    await ensureLibrarian();
+    await apiRequest(majorEndpoints.detail(code), {
+      method: "PATCH",
+      body: JSON.stringify(buildMajorPayload(formData, false)),
+    });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianMajors, {
+      notice: `Chuyên ngành ${code} đã được cập nhật.`,
+      dropParams: ["edit"],
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof LibrarianValidationError ? error.message : translateApiError(error);
+
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianMajors, {
+      error: message,
+    });
+  }
+
+  redirect(nextHref);
+}
+
+export async function deleteMajorAction(code: string, formData: FormData): Promise<void> {
+  const redirectTo = formData.get("redirect_to");
+  let nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianMajors, {});
+
+  try {
+    await ensureLibrarian();
+    await apiRequest(majorEndpoints.detail(code), {
+      method: "DELETE",
+    });
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianMajors, {
+      notice: `Chuyên ngành ${code} đã được xóa khỏi danh mục hoạt động.`,
+      dropParams: ["edit"],
+    });
+  } catch (error: unknown) {
+    nextHref = buildFeedbackRedirectHref(redirectTo, APP_ROUTES.librarianMajors, {
+      error: translateApiError(error),
+    });
+  }
+
+  redirect(nextHref);
 }
 
 export async function createReaderAction(formData: FormData): Promise<void> {

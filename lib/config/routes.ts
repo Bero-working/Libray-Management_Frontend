@@ -6,6 +6,7 @@ export const APP_ROUTES = {
   admin: "/admin",
   librarian: "/librarian",
   librarianReaders: "/librarian/readers",
+  librarianMajors: "/librarian/majors",
   librarianTitles: "/librarian/titles",
   librarianCopies: "/librarian/copies",
   librarianSearch: "/librarian/search",

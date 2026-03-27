@@ -78,9 +78,15 @@ export default async function LibrarianDashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Điều phối nghiệp vụ thư viện"
-        description="Theo dõi nhanh toàn bộ phase 1 của Librarian: danh mục đầu sách, trạng thái bản sao, luồng mượn trả và các báo cáo vận hành cốt lõi."
+        description="Theo dõi nhanh toàn bộ phase 1 của Librarian: chuyên ngành, danh mục đầu sách, trạng thái bản sao, luồng mượn trả và các báo cáo vận hành cốt lõi."
         actions={
           <>
+            <Link
+              href={APP_ROUTES.librarianMajors}
+              className="ui-button-secondary min-h-12 px-5 py-3 text-sm font-semibold"
+            >
+              Quản lý chuyên ngành
+            </Link>
             <Link
               href={APP_ROUTES.librarianLoans}
               className="ui-button-primary min-h-12 px-5 py-3 text-sm font-semibold"

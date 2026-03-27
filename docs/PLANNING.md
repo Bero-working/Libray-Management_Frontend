@@ -23,7 +23,7 @@ Từ tài liệu hiện tại:
 
 ### 2.2 Assumptions
 - API contract trong `docs/API_REFERENCE.md` là nguồn chuẩn để tích hợp.
-- `Reader` không có portal riêng ở giai đoạn hiện tại; chỉ xuất hiện như dữ liệu/luồng nghiệp vụ do librarian/admin thao tác.
+- `Reader` không có portal riêng ở giai đoạn hiện tại; chỉ xuất hiện như dữ liệu/luồng nghiệp vụ do `LIBRARIAN` thao tác, không phải scope quản trị của `ADMIN`.
 - Các prototype HTML hiện tại được dùng làm nguồn UI/UX baseline, không phải kiến trúc React/Next cuối cùng.
 - `FR-25` sẽ được giữ như phase sau, nhưng các module hiện tại nên được thiết kế theo hướng dễ gắn audit sau này.
 
@@ -72,26 +72,40 @@ Từ tài liệu hiện tại:
 
 **Mục tiêu**
 - Hoàn thiện actor vận hành chính của hệ thống.
-- Ưu tiên các luồng có giá trị nghiệp vụ cao nhất: tra cứu, đầu sách, bản sao, mượn/trả, báo cáo vận hành.
+- Ưu tiên các luồng có giá trị nghiệp vụ cao nhất: độc giả/thẻ thư viện, chuyên ngành, đầu sách, bản sao, tra cứu, mượn/trả, báo cáo vận hành.
 
 **Màn hình**
 - Librarian Dashboard
+- Quản lý độc giả / thẻ thư viện
+- Quản lý chuyên ngành
 - Quản lý đầu sách
 - Quản lý bản sao sách
 - Tra cứu sách
 - Xử lý mượn / trả
 - Báo cáo vận hành / overdue / top borrowed
 
+**Page breakdown cho majors trong Phase 1**
+- Danh sách chuyên ngành (`/librarian/majors`) để hiển thị danh mục, tìm nhanh và khởi tạo thao tác CRUD.
+- Tạo chuyên ngành (`/librarian/majors/new`) với form nhập `ma_chuyen_nganh`, `ten_chuyen_nganh`, `mo_ta`.
+- Chi tiết chuyên ngành (`/librarian/majors/{ma_chuyen_nganh}`) để xem dữ liệu hiện tại trước khi chỉnh sửa/xóa.
+- Cập nhật chuyên ngành (`/librarian/majors/{ma_chuyen_nganh}/edit`) để sửa `ten_chuyen_nganh` và `mo_ta`.
+- Xóa chuyên ngành được kích hoạt từ page danh sách hoặc chi tiết với confirm state và thông báo lỗi phụ thuộc rõ ràng.
+
 **API / entity liên quan**
+- `GET/POST/PATCH/DELETE /readers`
+- `POST /readers/{ma_doc_gia}/print-card`
+- `GET/POST/PATCH/DELETE /majors`
 - `GET/POST/PATCH/DELETE /titles`
 - `GET/POST/PATCH/DELETE /copies`
 - `GET /search/books`
 - `GET /loans`, `GET /loans/{id}`, `POST /loans`, `PATCH /loans/{id}/return`
 - `GET /reports/top-borrowed-titles`
 - `GET /reports/unreturned-readers`
-- Entities: `DAU_SACH`, `BAN_SAO_SACH`, `PHIEU_MUON`, `DOC_GIA`
+- Entities: `DOC_GIA`, `CHUYEN_NGANH`, `DAU_SACH`, `BAN_SAO_SACH`, `PHIEU_MUON`
 
 **Business rules cần phản ánh ở UI**
+- Không xóa reader nếu còn sách chưa trả.
+- Không xóa major nếu còn title tham chiếu.
 - Mỗi độc giả chỉ được có tối đa 1 phiếu mượn chưa trả.
 - Chỉ copy `AVAILABLE` mới được cho mượn.
 - Trả sách phải cập nhật đồng bộ `Loan.status` và `BookCopyStatus`.
@@ -102,6 +116,10 @@ Từ tài liệu hiện tại:
 - Data layer và validation mapping ổn định.
 
 **Acceptance checkpoints**
+- CRUD readers hoạt động đúng và in thẻ thư viện xử lý đúng response `application/pdf`.
+- Các page majors (list/create/detail/edit) hoạt động đúng, bám sát API `GET/POST/PATCH/DELETE /majors`.
+- Delete major hiển thị rõ lỗi phụ thuộc khi backend trả `409 CONFLICT` do còn title tham chiếu.
+- CRUD majors được tái sử dụng nhất quán ở titles/search.
 - Tạo/sửa/xem title hoạt động đúng.
 - Tạo/sửa/xem copy hoạt động đúng.
 - Luồng mượn sách chặn đúng khi reader đang có open loan.
@@ -112,37 +130,39 @@ Từ tài liệu hiện tại:
 
 **Mục tiêu**
 - Hoàn thiện actor quản trị hệ thống.
-- Đóng các gap còn thiếu giữa prototype và SRS/API: majors management, full account CRUD, staff management rõ ràng.
+- Bám đúng boundary actor của SRS/RBAC: `ADMIN` chỉ quản lý nhân viên, tài khoản và phân quyền; không ôm lại các luồng `readers`/`majors` của `LIBRARIAN`.
+- Hoàn thiện vòng đời quản trị truy cập: staff master data, account provisioning, role assignment, trạng thái hoạt động.
 
 **Màn hình**
 - Admin Dashboard
-- Quản lý độc giả
 - Quản lý nhân viên
-- Quản lý tài khoản & phân quyền
-- Quản lý chuyên ngành
+- Quản lý tài khoản
+- Gán role / trạng thái tài khoản / reset mật khẩu
+- Tổng quan phân bổ role và tình trạng truy cập
 
 **API / entity liên quan**
-- `GET/POST/PATCH/DELETE /readers`
-- `POST /readers/{ma_doc_gia}/print-card`
 - `GET/POST/PATCH/DELETE /staff`
 - `GET/POST/PATCH/DELETE /accounts`
-- `GET/POST/PATCH/DELETE /majors`
-- Entities: `DOC_GIA`, `NHAN_VIEN`, `TAI_KHOAN`, `CHUYEN_NGANH`
+- Entities: `NHAN_VIEN`, `TAI_KHOAN`
+- Role enum: `ADMIN`, `LIBRARIAN`, `LEADER`
 
 **Business rules cần phản ánh ở UI**
-- Không xóa reader nếu còn sách chưa trả.
-- Không xóa major nếu còn title tham chiếu.
-- Account phải gắn đúng staff và role hợp lệ.
-- Validation mã định danh unique phải được thể hiện rõ ở form.
+- Mỗi nhân viên chỉ gắn tối đa 1 tài khoản (`TAI_KHOAN.ma_nhan_vien` unique).
+- Account phải gắn đúng staff tồn tại và role hợp lệ; UI nên ưu tiên chọn staff chưa có account.
+- Cập nhật account phải hỗ trợ đổi role, khóa/mở trạng thái và đổi mật khẩu qua `newPassword` khi cần.
+- Luồng xóa/khóa cần phản ánh đúng semantics runtime hiện tại: `staff` và `accounts` đang soft delete, còn trường hợp có phụ thuộc nên ưu tiên ngừng hoạt động thay vì xóa cứng.
+- Validation mã định danh/username unique phải được thể hiện rõ ở form.
 
 **Phụ thuộc**
 - Phase 0.
 - Có thể tái sử dụng table/form pattern từ Phase 1.
+- Không duplicate UI của `readers` và `majors`; hai module này tiếp tục thuộc roadmap librarian.
 
 **Acceptance checkpoints**
-- CRUD readers/staff/accounts/majors hoạt động đầy đủ.
-- In thẻ thư viện gọi đúng API và xử lý đúng kiểu response PDF.
-- Role assignment được enforce đúng ở UI.
+- CRUD staff hoạt động đầy đủ theo đúng role `ADMIN`.
+- CRUD accounts hoạt động đầy đủ, gồm tạo account, cập nhật role/status và đổi mật khẩu khi cần.
+- Một staff không thể bị gắn nhiều hơn một account từ UI flow thông thường.
+- Role assignment được phản ánh đúng ở route/menu access sau lần đăng nhập kế tiếp hoặc sau khi refresh session.
 - Xử lý lỗi backend/business rule rõ ràng, không mơ hồ.
 
 ### Phase 3 — Leader reporting
@@ -175,7 +195,7 @@ Từ tài liệu hiện tại:
 ### Phase 4 — Reader-facing indirect flows
 
 **Mục tiêu**
-- Không tạo portal riêng cho reader, nhưng hoàn thiện các điểm chạm liên quan tới reader trong module admin/librarian.
+- Không tạo portal riêng cho reader, nhưng hoàn thiện các điểm chạm liên quan tới reader trong module librarian và các luồng tra cứu dùng chung.
 - Chuẩn hóa chi tiết độc giả, lịch sử mượn, trạng thái hiện tại.
 
 **Màn hình/chức năng**
@@ -191,12 +211,12 @@ Từ tài liệu hiện tại:
 - Entities: `DOC_GIA`, `PHIEU_MUON`
 
 **Phụ thuộc**
-- Phase 1 và Phase 2.
+- Phase 1.
 
 **Acceptance checkpoints**
 - Tra cứu reader nhanh từ mã/tên.
 - Hồ sơ reader hiển thị được trạng thái hiện tại và lịch sử mượn liên quan.
-- Dữ liệu reader nhất quán giữa admin và librarian modules.
+- Dữ liệu reader nhất quán giữa module độc giả và module mượn/trả.
 
 ---
 
@@ -221,7 +241,7 @@ Từ tài liệu hiện tại:
 
 ## 6. Risks và gaps từ tài liệu hiện tại
 
-- Prototype hiện thiếu các màn hình `majors` và account CRUD đầy đủ dù API đã có.
+- Prototype hiện chưa phản ánh đúng boundary actor: `readers` và `majors` thuộc librarian, còn `staff` và `accounts` thuộc admin; account CRUD cũng chưa được mô tả đủ.
 - Chưa có UI riêng cho `LEADER` dù role này đã có trong docs và RBAC.
 - `readers` và `copies` runtime docs ghi nhận chưa hoàn chỉnh pagination/filtering, nên cần lên kế hoạch UI linh hoạt cho state hiện tại và dễ mở rộng sau.
 - `FR-25` chưa fully covered nên không nên giả định có sẵn audit UI/API ở giai đoạn đầu.
@@ -240,7 +260,7 @@ Từ tài liệu hiện tại:
 
 **Lý do ưu tiên**
 - Librarian là actor vận hành chính và tạo giá trị nghiệp vụ cao nhất.
-- Admin đứng sau để hoàn thiện quản trị dữ liệu và RBAC.
+- Admin đứng sau để hoàn thiện quản trị truy cập, nhân sự nội bộ và RBAC.
 - Leader reporting chỉ nên làm sau khi dữ liệu vận hành đã ổn định.
 - Audit trail là phase tăng cường sau cùng vì hiện docs cũng xác nhận chưa full coverage.
 
@@ -276,8 +296,8 @@ Các artifact nên được dùng làm nguồn chuẩn khi thực thi:
 - Đối chiếu từng business rule UI với constraint trong `docs/DATABASE_SCHEMA.md`.
 
 ### 10.2 Kiểm thử theo actor
-- **Librarian:** title/copy/search/loan/return/report flows.
-- **Admin:** readers/staff/accounts/majors CRUD và role assignment.
+- **Librarian:** reader/major/title/copy/search/loan/return/report flows.
+- **Admin:** staff/accounts CRUD, staff-account linking, role assignment và account status flows.
 - **Leader:** report-only access và time filter behavior.
 
 ### 10.3 Kiểm thử phân quyền

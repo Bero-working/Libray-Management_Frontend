@@ -42,6 +42,14 @@ interface BackendReader {
   status: Reader["status"];
 }
 
+function mapMajor(major: BackendMajor): Major {
+  return {
+    code: major.code,
+    name: major.name,
+    description: major.description,
+  };
+}
+
 function mapReader(reader: BackendReader): Reader {
   return {
     code: reader.code,
@@ -56,13 +64,13 @@ function mapReader(reader: BackendReader): Reader {
 export async function getMajors(): Promise<Major[]> {
   const majors = await apiRequest<BackendMajor[]>(majorEndpoints.list);
 
-  return majors
-    .map((major) => ({
-      code: major.code,
-      name: major.name,
-      description: major.description,
-    }))
-    .toSorted((left, right) => left.name.localeCompare(right.name, "vi"));
+  return majors.map(mapMajor).toSorted((left, right) => left.name.localeCompare(right.name, "vi"));
+}
+
+export async function getMajorDetail(code: string): Promise<Major> {
+  const major = await apiRequest<BackendMajor>(majorEndpoints.detail(code));
+
+  return mapMajor(major);
 }
 
 export async function getReaders(): Promise<Reader[]> {
