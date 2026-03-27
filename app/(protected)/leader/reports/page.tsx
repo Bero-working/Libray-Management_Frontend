@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { ErrorState } from "@/components/feedback/error-state";
-import { FlashBanner } from "@/components/librarian/flash-banner";
 import { PageHeader } from "@/components/librarian/page-header";
 import { StatCard } from "@/components/librarian/stat-card";
 import { ReportPeriodForm } from "@/components/reports/report-period-form";
@@ -9,7 +8,6 @@ import { TopBorrowedTitlesSection } from "@/components/reports/top-borrowed-titl
 import { UnreturnedReadersSection } from "@/components/reports/unreturned-readers-section";
 import { APP_ROUTES } from "@/lib/config/routes";
 import { formatCount } from "@/lib/librarian/presenters";
-import { getFeedbackFromSearchParams } from "@/lib/librarian/utils";
 import {
   getReportsErrorMessage,
   getTopBorrowedTitles,
@@ -21,13 +19,12 @@ import {
   validateReportWindow,
 } from "@/lib/reports/utils";
 
-interface ReportsPageProps {
+interface LeaderReportsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function LibrarianReportsPage({ searchParams }: ReportsPageProps) {
+export default async function LeaderReportsPage({ searchParams }: LeaderReportsPageProps) {
   const resolvedSearchParams = await searchParams;
-  const feedback = getFeedbackFromSearchParams(resolvedSearchParams);
   const filters = readReportSearchParams(resolvedSearchParams);
   const validationError = validateReportWindow(filters.from, filters.to);
 
@@ -54,7 +51,7 @@ export default async function LibrarianReportsPage({ searchParams }: ReportsPage
   } catch (error: unknown) {
     return (
       <ErrorState
-        title="Không thể tải màn báo cáo"
+        title="Không thể tải reporting center"
         description={getReportsErrorMessage(error)}
       />
     );
@@ -65,21 +62,15 @@ export default async function LibrarianReportsPage({ searchParams }: ReportsPage
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Báo cáo vận hành"
-        description="Tổng hợp 2 báo cáo phase 1 cho Librarian: top borrowed titles theo khoảng ngày và danh sách độc giả còn phiếu mượn mở."
+        eyebrow="Leader Reporting"
+        title="Reporting center"
+        description="Theo dõi hai báo cáo cốt lõi dành cho lãnh đạo với phạm vi read-only: top borrowed titles theo kỳ và danh sách độc giả còn phiếu mượn mở."
         actions={
-          <>
-            <Link href={APP_ROUTES.librarianLoans} className="ui-button-secondary px-4 py-3 text-sm font-semibold">
-              Quay lại loans
-            </Link>
-            <Link href={APP_ROUTES.librarianSearch} className="ui-button-primary px-4 py-3 text-sm font-semibold">
-              Tra cứu catalog
-            </Link>
-          </>
+          <Link href={APP_ROUTES.leader} className="ui-button-secondary px-4 py-3 text-sm font-semibold">
+            Về dashboard leader
+          </Link>
         }
       />
-
-      {feedback ? <FlashBanner tone={feedback.tone} message={feedback.message} /> : null}
 
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard
@@ -103,7 +94,7 @@ export default async function LibrarianReportsPage({ searchParams }: ReportsPage
       </div>
 
       <ReportPeriodForm
-        action={APP_ROUTES.librarianReports}
+        action={APP_ROUTES.leaderReports}
         from={filters.from}
         to={filters.to}
         topLimit={filters.topLimit}
@@ -116,7 +107,7 @@ export default async function LibrarianReportsPage({ searchParams }: ReportsPage
         emptyTitle="Không có dữ liệu trong kỳ"
         emptyDescription="Thử mở rộng khoảng ngày hoặc chờ thêm giao dịch mượn mới."
         pagination={{
-          pathname: APP_ROUTES.librarianReports,
+          pathname: APP_ROUTES.leaderReports,
           params: {
             from: filters.from,
             to: filters.to,
@@ -134,7 +125,7 @@ export default async function LibrarianReportsPage({ searchParams }: ReportsPage
         emptyTitle="Không có độc giả nợ sách"
         emptyDescription="Danh sách này sẽ xuất hiện khi hệ thống có loan chưa được hoàn tất trả."
         pagination={{
-          pathname: APP_ROUTES.librarianReports,
+          pathname: APP_ROUTES.leaderReports,
           params: {
             from: filters.from,
             to: filters.to,

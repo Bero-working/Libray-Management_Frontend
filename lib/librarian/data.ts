@@ -5,7 +5,6 @@ import {
   loanEndpoints,
   majorEndpoints,
   readerEndpoints,
-  reportEndpoints,
   searchEndpoints,
   titleEndpoints,
 } from "@/lib/api/endpoints";
@@ -20,10 +19,6 @@ import type {
   SearchBookFilters,
   SearchBookResult,
   Title,
-  TopBorrowedFilters,
-  TopBorrowedTitleRow,
-  UnreturnedReaderFilters,
-  UnreturnedReaderRow,
 } from "@/lib/librarian/types";
 import { buildHref } from "@/lib/librarian/utils";
 
@@ -120,30 +115,6 @@ export async function searchBooks(
       ma_chuyen_nganh: filters.ma_chuyen_nganh,
       ma_sach: filters.ma_sach,
       tinh_trang: filters.tinh_trang,
-    })
-  );
-}
-
-export async function getTopBorrowedTitles(
-  filters: TopBorrowedFilters
-): Promise<PaginatedResult<TopBorrowedTitleRow>> {
-  return apiRequest<PaginatedResult<TopBorrowedTitleRow>>(
-    buildHref(reportEndpoints.topBorrowedTitles, {
-      from: filters.from,
-      to: filters.to,
-      page: filters.page,
-      limit: filters.limit,
-    })
-  );
-}
-
-export async function getUnreturnedReaders(
-  filters: UnreturnedReaderFilters
-): Promise<PaginatedResult<UnreturnedReaderRow>> {
-  return apiRequest<PaginatedResult<UnreturnedReaderRow>>(
-    buildHref(reportEndpoints.unreturnedReaders, {
-      page: filters.page,
-      limit: filters.limit,
     })
   );
 }

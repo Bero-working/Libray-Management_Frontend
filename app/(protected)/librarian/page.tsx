@@ -10,11 +10,11 @@ import {
   getLoans,
   getLibrarianErrorMessage,
   getTitles,
-  getTopBorrowedTitles,
-  getUnreturnedReaders,
 } from "@/lib/librarian/data";
 import { formatCount, formatDate } from "@/lib/librarian/presenters";
 import { APP_ROUTES } from "@/lib/config/routes";
+import { buildLibrarianReaderDetailHref } from "@/lib/librarian/utils";
+import { getTopBorrowedTitles, getUnreturnedReaders } from "@/lib/reports/data";
 
 function formatLocalDate(value: Date): string {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(
@@ -78,9 +78,15 @@ export default async function LibrarianDashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Điều phối nghiệp vụ thư viện"
-        description="Theo dõi nhanh toàn bộ phase 1 của Librarian: chuyên ngành, danh mục đầu sách, trạng thái bản sao, luồng mượn trả và các báo cáo vận hành cốt lõi."
+        description="Theo dõi nhanh các luồng vận hành chính của Librarian: danh mục, bản sao, mượn trả, báo cáo và các điểm chạm reader phục vụ phase 4 tại quầy."
         actions={
           <>
+            <Link
+              href={APP_ROUTES.librarianReaders}
+              className="ui-button-secondary min-h-12 px-5 py-3 text-sm font-semibold"
+            >
+              Tra cứu reader
+            </Link>
             <Link
               href={APP_ROUTES.librarianMajors}
               className="ui-button-secondary min-h-12 px-5 py-3 text-sm font-semibold"
@@ -212,7 +218,17 @@ export default async function LibrarianDashboardPage() {
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <p className="font-semibold text-slate-900">{reader.ho_ten}</p>
+                      <p className="font-semibold text-slate-900">
+                        <Link
+                          href={buildLibrarianReaderDetailHref(
+                            reader.ma_doc_gia,
+                            APP_ROUTES.librarian
+                          )}
+                          className="hover:text-slate-700"
+                        >
+                          {reader.ho_ten}
+                        </Link>
+                      </p>
                       <p className="text-sm text-slate-500">
                         {reader.ma_doc_gia} • {reader.lop}
                       </p>
@@ -276,7 +292,17 @@ export default async function LibrarianDashboardPage() {
                 {activeLoans.items.map((loan) => (
                   <tr key={loan.id}>
                     <td className="px-5 py-4 font-semibold text-slate-900">#{loan.id}</td>
-                    <td className="px-5 py-4 text-sm text-slate-600">{loan.ma_doc_gia}</td>
+                    <td className="px-5 py-4 text-sm text-slate-600">
+                      <Link
+                        href={buildLibrarianReaderDetailHref(
+                          loan.ma_doc_gia,
+                          APP_ROUTES.librarian
+                        )}
+                        className="font-semibold text-slate-700 hover:text-slate-950"
+                      >
+                        {loan.ma_doc_gia}
+                      </Link>
+                    </td>
                     <td className="px-5 py-4 text-sm text-slate-600">{loan.ma_sach}</td>
                     <td className="px-5 py-4 text-sm text-slate-600">{loan.ma_thu_thu}</td>
                     <td className="px-5 py-4 text-sm text-slate-600">

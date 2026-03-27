@@ -15,8 +15,21 @@ export const APP_ROUTES = {
   librarianLoans: "/librarian/loans",
   librarianReports: "/librarian/reports",
   leader: "/leader",
+  leaderReports: "/leader/reports",
   forbidden: "/forbidden",
 } as const;
+
+function encodeRouteSegment(value: string): string {
+  return encodeURIComponent(value);
+}
+
+export function getLibrarianReaderDetailRoute(code: string): string {
+  return `${APP_ROUTES.librarianReaders}/${encodeRouteSegment(code)}`;
+}
+
+export function getLibrarianReaderCardRoute(code: string): string {
+  return `${getLibrarianReaderDetailRoute(code)}/card`;
+}
 
 export const ROLE_HOME_ROUTES: Record<AccountRole, string> = {
   ADMIN: APP_ROUTES.admin,

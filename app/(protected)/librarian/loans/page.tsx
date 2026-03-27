@@ -17,6 +17,7 @@ import {
 } from "@/lib/librarian/data";
 import { formatDate } from "@/lib/librarian/presenters";
 import {
+  buildLibrarianReaderDetailHref,
   buildHref,
   getFeedbackFromSearchParams,
   readIntSearchParam,
@@ -80,6 +81,8 @@ export default async function LibrarianLoansPage({ searchParams }: LoansPageProp
       ngay_muon_to: filters.ngay_muon_to,
       return_loan: selectedReturnLoan?.id,
     });
+    const buildReaderProfileHref = (readerCode: string) =>
+      buildLibrarianReaderDetailHref(readerCode, currentHref);
 
     const paginationParams = {
       limit: filters.limit,
@@ -218,7 +221,13 @@ export default async function LibrarianLoansPage({ searchParams }: LoansPageProp
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
                   <p className="font-semibold text-slate-900">Phiếu #{selectedReturnLoan.id}</p>
                   <p className="mt-2">
-                    Độc giả: {selectedReturnLoan.ma_doc_gia}{" "}
+                    Độc giả:{" "}
+                    <Link
+                      href={buildReaderProfileHref(selectedReturnLoan.ma_doc_gia)}
+                      className="font-semibold text-slate-700 hover:text-slate-950"
+                    >
+                      {selectedReturnLoan.ma_doc_gia}
+                    </Link>{" "}
                     {readersByCode.get(selectedReturnLoan.ma_doc_gia)
                       ? `• ${readersByCode.get(selectedReturnLoan.ma_doc_gia)?.fullName}`
                       : ""}
@@ -390,7 +399,14 @@ export default async function LibrarianLoansPage({ searchParams }: LoansPageProp
                         <tr key={loan.id} className="align-top">
                           <td className="px-5 py-4 font-semibold text-slate-900">#{loan.id}</td>
                           <td className="px-5 py-4">
-                            <p className="font-semibold text-slate-900">{loan.ma_doc_gia}</p>
+                            <p className="font-semibold text-slate-900">
+                              <Link
+                                href={buildReaderProfileHref(loan.ma_doc_gia)}
+                                className="hover:text-slate-700"
+                              >
+                                {loan.ma_doc_gia}
+                              </Link>
+                            </p>
                             <p className="text-sm text-slate-500">
                               {reader ? `${reader.fullName} • ${reader.className}` : "Không có reader cache"}
                             </p>

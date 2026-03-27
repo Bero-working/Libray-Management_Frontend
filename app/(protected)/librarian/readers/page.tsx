@@ -21,6 +21,8 @@ import {
 } from "@/lib/librarian/presenters";
 import type { ReaderStatus } from "@/lib/librarian/types";
 import {
+  buildLibrarianReaderCardHref,
+  buildLibrarianReaderDetailHref,
   buildHref,
   getFeedbackFromSearchParams,
   readTrimmedSearchParam,
@@ -34,10 +36,6 @@ interface ReadersPageProps {
 const labelClass = "text-xs font-semibold uppercase tracking-[0.24em] text-slate-500";
 const inputClass = "mt-2 ui-input w-full px-4 py-3 text-sm";
 const readerStatuses: ReaderStatus[] = ["ACTIVE", "LOCKED", "INACTIVE"];
-
-function buildReaderCardHref(code: string): string {
-  return `${APP_ROUTES.librarianReaders}/${encodeURIComponent(code)}/card`;
-}
 
 export default async function LibrarianReadersPage({ searchParams }: ReadersPageProps) {
   const resolvedSearchParams = await searchParams;
@@ -80,6 +78,10 @@ export default async function LibrarianReadersPage({ searchParams }: ReadersPage
     filteredReaders.find((reader) => reader.code === editCode) ??
     readers.find((reader) => reader.code === editCode) ??
     null;
+  const listHref = buildHref(APP_ROUTES.librarianReaders, {
+    query: query || undefined,
+    status: status || undefined,
+  });
 
   const currentHref = buildHref(APP_ROUTES.librarianReaders, {
     query: query || undefined,
@@ -95,7 +97,7 @@ export default async function LibrarianReadersPage({ searchParams }: ReadersPage
     <div className="space-y-6">
       <PageHeader
         title="Quản lý độc giả"
-        description="Theo dõi hồ sơ độc giả, cập nhật trạng thái thẻ và thao tác in thẻ thư viện. Màn này bám runtime hiện tại: `GET /readers` chưa hỗ trợ filter hoặc pagination nên bộ lọc đang chạy ở phía frontend."
+        description="Theo dõi danh sách reader, cập nhật trạng thái thẻ, in thẻ thư viện và mở hồ sơ chi tiết để tra cứu loan history. Runtime hiện tại vẫn dùng `GET /readers` không có filter/pagination phía server nên bộ lọc đang chạy ở frontend."
         actions={
           <>
             <Link
@@ -187,9 +189,23 @@ export default async function LibrarianReadersPage({ searchParams }: ReadersPage
                 <tbody className="divide-y divide-slate-100">
                   {filteredReaders.map((reader) => (
                     <tr key={reader.code} className="align-top">
-                      <td className="px-5 py-4 font-semibold text-slate-900">{reader.code}</td>
+                      <td className="px-5 py-4 font-semibold text-slate-900">
+                        <Link
+                          href={buildLibrarianReaderDetailHref(reader.code, listHref)}
+                          className="hover:text-slate-700"
+                        >
+                          {reader.code}
+                        </Link>
+                      </td>
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-slate-900">{reader.fullName}</p>
+                        <p className="font-semibold text-slate-900">
+                          <Link
+                            href={buildLibrarianReaderDetailHref(reader.code, listHref)}
+                            className="hover:text-slate-700"
+                          >
+                            {reader.fullName}
+                          </Link>
+                        </p>
                         <p className="text-sm text-slate-500">
                           {reader.className} • {getGenderLabel(reader.gender)}
                         </p>
@@ -201,16 +217,24 @@ export default async function LibrarianReadersPage({ searchParams }: ReadersPage
                         <StatusBadge status={reader.status} />
                       </td>
                       <td className="px-5 py-4 text-right">
-                        <Link
-                          href={buildHref(APP_ROUTES.librarianReaders, {
-                            query: query || undefined,
-                            status: status || undefined,
-                            edit: reader.code,
-                          })}
-                          className="text-sm font-semibold text-slate-700 hover:text-slate-950"
-                        >
-                          Sửa
-                        </Link>
+                        <div className="flex justify-end gap-3">
+                          <Link
+                            href={buildLibrarianReaderDetailHref(reader.code, listHref)}
+                            className="text-sm font-semibold text-slate-700 hover:text-slate-950"
+                          >
+                            Hồ sơ
+                          </Link>
+                          <Link
+                            href={buildHref(APP_ROUTES.librarianReaders, {
+                              query: query || undefined,
+                              status: status || undefined,
+                              edit: reader.code,
+                            })}
+                            className="text-sm font-semibold text-slate-700 hover:text-slate-950"
+                          >
+                            Sửa
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -393,8 +417,22 @@ export default async function LibrarianReadersPage({ searchParams }: ReadersPage
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <form action={buildReaderCardHref(resolvedSelectedReader.code)} method="post" target="_blank">
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <Link
+                  href={buildLibrarianReaderDetailHref(
+                    resolvedSelectedReader.code,
+                    currentHref
+                  )}
+                  className="ui-button-secondary w-full px-4 py-3 text-center text-sm font-semibold"
+                >
+                  Mở hồ sơ reader
+                </Link>
+
+                <form
+                  action={buildLibrarianReaderCardHref(resolvedSelectedReader.code)}
+                  method="post"
+                  target="_blank"
+                >
                   <button
                     type="submit"
                     className="ui-button-secondary w-full px-4 py-3 text-sm font-semibold"

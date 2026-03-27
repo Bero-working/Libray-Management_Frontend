@@ -1,3 +1,8 @@
+import {
+  getLibrarianReaderCardRoute,
+  getLibrarianReaderDetailRoute,
+} from "@/lib/config/routes";
+
 export type SearchParamValue = string | string[] | undefined;
 
 export type SearchParamRecord = Record<string, SearchParamValue>;
@@ -51,6 +56,19 @@ export function buildHref(
   const query = searchParams.toString();
 
   return query ? `${pathname}?${query}` : pathname;
+}
+
+export function buildLibrarianReaderDetailHref(
+  code: string,
+  returnTo?: string | null
+): string {
+  return buildHref(getLibrarianReaderDetailRoute(code), {
+    return_to: returnTo || undefined,
+  });
+}
+
+export function buildLibrarianReaderCardHref(code: string): string {
+  return getLibrarianReaderCardRoute(code);
 }
 
 export function updateHref(

@@ -81,4 +81,10 @@ export const navigationItems: readonly NavigationItem[] = [
     description: "Theo dõi báo cáo điều hành",
     allowedRoles: ["LEADER"],
   },
+  {
+    href: APP_ROUTES.leaderReports,
+    label: "Reporting Center",
+    description: "Top borrowed, unreturned readers và bộ lọc thời gian",
+    allowedRoles: ["LEADER"],
+  },
 ];
