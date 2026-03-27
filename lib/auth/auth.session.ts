@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { AccountRole, AuthTokens, SessionData } from "@/lib/auth/auth.types";
 import {
   clearSessionCookies,
+  clearSessionCookiesSafely,
   readAuthTokens,
   readSessionData,
   writeSessionCookies,
@@ -22,7 +23,7 @@ export async function getSession(): Promise<Session | null> {
 
   if (!tokens || !sessionData) {
     if (tokens || sessionData) {
-      await clearSessionCookies();
+      await clearSessionCookiesSafely();
     }
 
     return null;

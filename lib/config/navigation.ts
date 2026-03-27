@@ -12,7 +12,19 @@ export const navigationItems: readonly NavigationItem[] = [
   {
     href: APP_ROUTES.admin,
     label: "Admin Dashboard",
-    description: "Quản trị hệ thống và tài khoản",
+    description: "Tổng quan nhân sự, role và truy cập",
+    allowedRoles: ["ADMIN"],
+  },
+  {
+    href: APP_ROUTES.adminStaff,
+    label: "Staff",
+    description: "CRUD nhân viên và theo dõi account linking",
+    allowedRoles: ["ADMIN"],
+  },
+  {
+    href: APP_ROUTES.adminAccounts,
+    label: "Accounts",
+    description: "Cấp tài khoản, role, status và reset password",
     allowedRoles: ["ADMIN"],
   },
   {

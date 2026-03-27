@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { getDefaultRouteForRole, getSession } from "@/lib/auth/auth.session";
+import { getFeedbackFromSearchParams } from "@/lib/librarian/utils";
 
 const headlineFont = Manrope({
   subsets: ["latin"],
@@ -15,8 +16,14 @@ const bodyFont = Inter({
   display: "swap",
 });
 
-export default async function LoginPage() {
+interface LoginPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
   const session = await getSession();
+  const resolvedSearchParams = await searchParams;
+  const feedback = getFeedbackFromSearchParams(resolvedSearchParams);
 
   if (session) {
     redirect(getDefaultRouteForRole(session.sessionData.user.role));
@@ -72,6 +79,17 @@ export default async function LoginPage() {
                 Vui lòng đăng nhập vào tài khoản của bạn
               </p>
             </div>
+            {feedback ? (
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm ${
+                  feedback.tone === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-red-200 bg-red-50 text-red-700"
+                }`}
+              >
+                {feedback.message}
+              </div>
+            ) : null}
             <LoginForm />
           </div>
         </section>

@@ -4,6 +4,8 @@ export const APP_ROUTES = {
   home: "/",
   login: "/login",
   admin: "/admin",
+  adminStaff: "/admin/staff",
+  adminAccounts: "/admin/accounts",
   librarian: "/librarian",
   librarianReaders: "/librarian/readers",
   librarianMajors: "/librarian/majors",

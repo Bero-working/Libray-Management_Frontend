@@ -1,70 +1,24 @@
-"use server";
-
-import { createHmac, timingSafeEqual } from "node:crypto";
+import "server-only";
 
 import { cookies } from "next/headers";
 
 import type { AuthTokens, SessionData } from "@/lib/auth/auth.types";
-import { env } from "@/lib/config/env";
+import {
+  ACCESS_TOKEN_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_NAME,
+  SESSION_COOKIE_NAME,
+  createSessionCookieOptions,
+} from "@/lib/auth/auth.constants";
+import { decodeSessionCookie, encodeSessionCookie } from "@/lib/auth/auth.session-cookie";
 
-const accessTokenCookieName = "scholaris.access-token";
-const refreshTokenCookieName = "scholaris.refresh-token";
-const sessionCookieName = "scholaris.session";
-const cookieMaxAgeInSeconds = 60 * 60 * 24 * 7;
-
-function createCookieOptions() {
-  return {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: env.cookieSecure,
-    path: "/",
-    maxAge: cookieMaxAgeInSeconds,
-  };
-}
-
-function signSessionValue(value: string): string {
-  return createHmac("sha256", env.sessionSecret).update(value).digest("hex");
-}
-
-function encodeSession(session: SessionData): string {
-  const payload = JSON.stringify(session);
-  const signature = signSessionValue(payload);
-  const encodedPayload = Buffer.from(payload, "utf8").toString("base64url");
-
-  return `${encodedPayload}.${signature}`;
-}
-
-function decodeSession(value: string): SessionData | null {
-  const [encodedPayload, signature] = value.split(".");
-
-  if (!encodedPayload || !signature) {
-    return null;
-  }
-
-  const payload = Buffer.from(encodedPayload, "base64url").toString("utf8");
-  const expectedSignature = signSessionValue(payload);
-  const provided = Buffer.from(signature, "hex");
-  const expected = Buffer.from(expectedSignature, "hex");
-
-  if (provided.length !== expected.length) {
-    return null;
-  }
-
-  if (!timingSafeEqual(provided, expected)) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(payload) as SessionData;
-  } catch {
-    return null;
-  }
+export function isCookieMutationError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("Cookies can only be modified");
 }
 
 export async function readAuthTokens(): Promise<AuthTokens | null> {
   const cookieStore = await cookies();
-  const accessToken = cookieStore.get(accessTokenCookieName)?.value;
-  const refreshToken = cookieStore.get(refreshTokenCookieName)?.value;
+  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE_NAME)?.value;
+  const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE_NAME)?.value;
 
   if (!accessToken || !refreshToken) {
     return null;
@@ -78,13 +32,13 @@ export async function readAuthTokens(): Promise<AuthTokens | null> {
 
 export async function readSessionData(): Promise<SessionData | null> {
   const cookieStore = await cookies();
-  const sessionValue = cookieStore.get(sessionCookieName)?.value;
+  const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!sessionValue) {
     return null;
   }
 
-  return decodeSession(sessionValue);
+  return decodeSessionCookie(sessionValue);
 }
 
 export async function writeSessionCookies(
@@ -92,17 +46,40 @@ export async function writeSessionCookies(
   session: SessionData
 ): Promise<void> {
   const cookieStore = await cookies();
-  const options = createCookieOptions();
+  const options = createSessionCookieOptions();
 
-  cookieStore.set(accessTokenCookieName, tokens.accessToken, options);
-  cookieStore.set(refreshTokenCookieName, tokens.refreshToken, options);
-  cookieStore.set(sessionCookieName, encodeSession(session), options);
+  cookieStore.set(ACCESS_TOKEN_COOKIE_NAME, tokens.accessToken, options);
+  cookieStore.set(REFRESH_TOKEN_COOKIE_NAME, tokens.refreshToken, options);
+  cookieStore.set(SESSION_COOKIE_NAME, encodeSessionCookie(session), options);
+}
+
+export async function writeSessionCookiesSafely(
+  tokens: AuthTokens,
+  session: SessionData
+): Promise<void> {
+  try {
+    await writeSessionCookies(tokens, session);
+  } catch (error: unknown) {
+    if (!isCookieMutationError(error)) {
+      throw error;
+    }
+  }
 }
 
 export async function clearSessionCookies(): Promise<void> {
   const cookieStore = await cookies();
 
-  cookieStore.delete(accessTokenCookieName);
-  cookieStore.delete(refreshTokenCookieName);
-  cookieStore.delete(sessionCookieName);
+  cookieStore.delete(ACCESS_TOKEN_COOKIE_NAME);
+  cookieStore.delete(REFRESH_TOKEN_COOKIE_NAME);
+  cookieStore.delete(SESSION_COOKIE_NAME);
+}
+
+export async function clearSessionCookiesSafely(): Promise<void> {
+  try {
+    await clearSessionCookies();
+  } catch (error: unknown) {
+    if (!isCookieMutationError(error)) {
+      throw error;
+    }
+  }
 }

@@ -43,3 +43,13 @@ export const reportEndpoints = {
   topBorrowedTitles: "/reports/top-borrowed-titles",
   unreturnedReaders: "/reports/unreturned-readers",
 } as const;
+
+export const staffEndpoints = {
+  list: "/staff",
+  detail: (code: string) => `/staff/${encodeSegment(code)}`,
+} as const;
+
+export const accountEndpoints = {
+  list: "/accounts",
+  detail: (username: string) => `/accounts/${encodeSegment(username)}`,
+} as const;

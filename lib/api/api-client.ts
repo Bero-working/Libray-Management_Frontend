@@ -1,13 +1,15 @@
 import type { AuthTokens, LoginResponse, SessionData } from "@/lib/auth/auth.types";
 import {
   clearSessionCookies,
+  clearSessionCookiesSafely,
   readAuthTokens,
   readSessionData,
-  writeSessionCookies,
+  writeSessionCookiesSafely,
 } from "@/lib/auth/auth.cookies";
+import { requestTokenRefresh } from "@/lib/auth/auth.refresh";
 import { ApiError } from "@/lib/api/api-errors";
+import { buildApiUrl } from "@/lib/api/api-url";
 import { authEndpoints } from "@/lib/api/endpoints";
-import { env } from "@/lib/config/env";
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -18,34 +20,10 @@ interface ApiEnvelope<T> {
   };
 }
 
-interface RefreshResponse {
-  accessToken: string;
-  refreshToken: string;
-}
-
 interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: BodyInit | null;
   skipAuth?: boolean;
   retryOnUnauthorized?: boolean;
-}
-
-function buildUrl(path: string): string {
-  const baseUrl = new URL(env.apiBaseUrl);
-
-  if (!baseUrl.pathname.endsWith("/")) {
-    baseUrl.pathname = `${baseUrl.pathname}/`;
-  }
-
-  const normalizedPath = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(path)
-    ? path
-    : path.replace(/^\/+/, "");
-  const url = new URL(normalizedPath, baseUrl);
-
-  if (url.origin !== new URL(env.apiBaseUrl).origin) {
-    throw new Error("Cross-origin API requests are not allowed.");
-  }
-
-  return url.toString();
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -92,20 +70,9 @@ async function refreshTokens(
   tokens: AuthTokens,
   sessionData: SessionData
 ): Promise<AuthTokens> {
-  const response = await fetch(buildUrl(authEndpoints.refresh), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      refreshToken: tokens.refreshToken,
-    }),
-    cache: "no-store",
-  });
+  const refreshedTokens = await requestTokenRefresh(tokens.refreshToken);
 
-  const refreshedTokens = await parseResponse<RefreshResponse>(response);
-
-  await writeSessionCookies(refreshedTokens, sessionData);
+  await writeSessionCookiesSafely(refreshedTokens, sessionData);
 
   return refreshedTokens;
 }
@@ -129,11 +96,11 @@ export async function apiRequestRaw(
     requestHeaders.set("Content-Type", "application/json");
   }
 
-  if (tokens?.accessToken) {
+  if (tokens?.accessToken && !requestHeaders.has("Authorization")) {
     requestHeaders.set("Authorization", `Bearer ${tokens.accessToken}`);
   }
 
-  const response = await fetch(buildUrl(path), {
+  const response = await fetch(buildApiUrl(path), {
     ...rest,
     headers: requestHeaders,
     body,
@@ -144,7 +111,7 @@ export async function apiRequestRaw(
     const sessionData = await readSessionData();
 
     if (!tokens || !sessionData) {
-      await clearSessionCookies();
+      await clearSessionCookiesSafely();
       throw new ApiError("Session expired.", 401, "SESSION_EXPIRED");
     }
 
@@ -160,7 +127,7 @@ export async function apiRequestRaw(
         retryOnUnauthorized: false,
       });
     } catch {
-      await clearSessionCookies();
+      await clearSessionCookiesSafely();
       throw new ApiError("Session expired.", 401, "SESSION_EXPIRED");
     }
   }
